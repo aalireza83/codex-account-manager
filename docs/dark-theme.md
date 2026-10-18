@@ -6,7 +6,8 @@ Dark Mode uses the exact color values exposed by the public
 The source color tokens are recorded in [blue-dark-tokens.json](blue-dark-tokens.json).
 Values remain in OKLCH; they are not approximated with a different hex palette.
 The dark primary and its foreground use the dark preview's values, which differ
-from the light preview's primary values.
+from the light preview's primary values. Blue buttons intentionally use white
+text for readability, including hover, pressed, focus, and disabled states.
 
 `web/src/blue-dark.css` adapts those tokens to TailAdmin inside `.dark` only.
 `web/src/app.css` retains the existing light rules, typography, spacing, radii,
@@ -17,7 +18,7 @@ responsive layout, and modal behavior. The supplied logo asset is unchanged.
 | Page background and main text | `background`, `foreground` |
 | Cards and ordinary panels | `card`, `card-foreground` |
 | Modals and select options | `popover`, `popover-foreground` |
-| Primary actions and usage bars | `primary`, `primary-foreground` |
+| Primary actions and usage bars | `primary`; white text on blue buttons |
 | Neutral controls and hover/active surfaces | `secondary`, `accent` |
 | Labels, saved-data metadata, and scrollbars | `muted-foreground` |
 | Control borders and keyboard focus | `input`, `ring` |

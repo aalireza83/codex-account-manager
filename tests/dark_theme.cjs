@@ -84,7 +84,7 @@ async function navigate(page,view){
    }
    if(release==='new'){
     await navigate(page,'settings');await page.evaluate(()=>document.documentElement.classList.add('dark'));
-    await token(page,'#saveRestartCommands','backgroundColor','--primary');await token(page,'#saveRestartCommands','color','--primary-foreground');
+    await token(page,'#saveRestartCommands','backgroundColor','--primary');await token(page,'#saveRestartCommands','color','#fff');
     await page.locator('#restartAppCommands').focus();await token(page,'#restartAppCommands','borderTopColor','--ring');
     assert.match(await page.locator('#restartAppCommands').evaluate(e=>getComputedStyle(e).boxShadow),/okl(?:ch|ab)/);
     await page.locator('#saveRestartCommands').hover();
