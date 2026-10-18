@@ -300,8 +300,8 @@ function render(data){
         <div class="ping-control"><span>Auto Ping<div class="auto-ping-state"><div>${esc(pingState)}</div><div>${esc(lastPing)}</div>${a.auto_ping_next_retry_at?`<div>Retry: ${esc(localTime(a.auto_ping_next_retry_at,true))}</div>`:''}${a.auto_ping_last_error?`<div class="ping-error">Last error: ${esc(a.auto_ping_last_error)}</div>`:''}</div></span><label class="switch" title="Auto Ping"><input type="checkbox" aria-label="Auto Ping" ${a.auto_ping_configured?'checked':''} onchange='setAccountAutoPing(${jsArg(selector)},this)'><span class="switch-track"></span></label></div>
         ${fullyActive?'<span class="badge active">ACTIVE ACCOUNT</span>':''}
       </div>
-      <div class="plan">${esc(a.plan||'—')}</div>
-      <div class="usage-stack">${metric('5-hour remaining',five)}${metric('Weekly remaining',weekly)}${a.usage?.reset_credits!=null?`<div class="metric"><div class="label">Available resets</div><div class="value">${esc(a.usage.reset_credits)}</div></div>`:''}${usageRefreshStatus(a)}</div>
+      <div class="account-details"><div class="plan">${esc(a.plan||'—')}</div>${a.usage?.reset_credits!=null?`<div class="metric account-resets"><span class="label">Available resets</span><span class="value">${esc(a.usage.reset_credits)}</span></div>`:''}</div>
+      <div class="usage-stack">${metric('5-hour remaining',five)}${metric('Weekly remaining',weekly)}${usageRefreshStatus(a)}</div>
       <div class="account-actions">
         <button class="test-button" onclick='pingAccount(${jsArg(selector)},this)'>Ping</button>
         <button class="alias-button" onclick='openAliasEditor(${jsArg(stableSelector)},${jsArg(selector)},${jsArg(a.alias||'')})'>${a.alias?'Edit alias':'Set alias'}</button>

@@ -8,6 +8,8 @@ Values remain in OKLCH; they are not approximated with a different hex palette.
 The dark primary and its foreground use the dark preview's values, which differ
 from the light preview's primary values. Blue buttons intentionally use white
 text for readability, including hover, pressed, focus, and disabled states.
+Links and blue statistics icons use a lighter blue on dark surfaces, and checked
+switches use a white thumb so their state remains easy to identify.
 
 `web/src/blue-dark.css` adapts those tokens to TailAdmin inside `.dark` only.
 `web/src/app.css` retains the existing light rules, typography, spacing, radii,
@@ -48,3 +50,8 @@ No live credentials, real login, Ping, service restart, or account switch is use
 The default comparison reads the committed CSS from `HEAD`. To compare against
 another revision, set `THEME_BASELINE_REF` to that revision before running the
 test. The test prints a temporary directory containing synthetic screenshots.
+
+For changes limited to dark link/icon/switch readability and native account
+card spacing, run `npm run test:readability`. This compares the affected Light
+Mode colors, checks dark contrast, and verifies compact cards at desktop and
+mobile widths without performing account operations.

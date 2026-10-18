@@ -10,6 +10,8 @@
     --popover: oklch(0.21 0.006 285.885);
     --popover-foreground: oklch(0.985 0 0);
     --primary: oklch(0.546 0.245 262.881);
+    /* Lighter blue for text/icons on dark surfaces; retain primary fills. */
+    --readable-blue: oklch(0.75 0.14 262.881);
     --primary-foreground: oklch(0.379 0.146 265.522);
     --secondary: oklch(0.274 0.006 286.033);
     --secondary-foreground: oklch(0.985 0 0);
@@ -77,8 +79,8 @@
   .dark body { background: var(--background); color: var(--foreground); }
   .dark * { border-color: var(--border); }
   .dark :is(h1,h2,h3,label,summary) { color: var(--foreground); }
-  .dark a { color: var(--primary); }
-  .dark a:hover { color: color-mix(in oklab,var(--primary) 80%,var(--foreground)); }
+  .dark a { color: var(--readable-blue); }
+  .dark a:hover { color: color-mix(in oklab,var(--readable-blue) 80%,var(--foreground)); }
   .dark :is(button,a,summary,input,select,textarea):focus-visible {
     outline-color: var(--ring);
   }
@@ -169,7 +171,7 @@
     background: color-mix(in oklab,var(--chart-2) 15%,transparent); color: var(--chart-2);
   }
   .dark .pill.off { background: color-mix(in oklab,var(--destructive) 15%,transparent); color: var(--destructive); }
-  .dark .stat-icon { background: color-mix(in oklab,var(--primary) 10%,transparent); color: var(--primary); }
+  .dark .stat-icon { background: color-mix(in oklab,var(--primary) 10%,transparent); color: var(--readable-blue); }
   .dark .stat-icon.green { background: color-mix(in oklab,var(--chart-2) 10%,transparent); color: var(--chart-2); }
   .dark .stat-icon.purple { background: color-mix(in oklab,var(--chart-4) 10%,transparent); color: var(--chart-4); }
   .dark .bar { background: var(--muted); }
@@ -182,7 +184,7 @@
   .dark .switch-track { background: var(--input); }
   .dark .switch-track:after { background: var(--foreground); }
   .dark .switch input:checked+.switch-track { background: var(--primary); }
-  .dark .switch input:checked+.switch-track:after { background: var(--primary-foreground); }
+  .dark .switch input:checked+.switch-track:after { background: #fff; }
   .dark .switch input:focus-visible+.switch-track { outline-color: var(--ring); }
   .dark :is(.notice,.api-usage-note) {
     background: color-mix(in oklab,var(--primary) 10%,transparent);

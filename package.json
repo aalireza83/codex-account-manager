@@ -6,7 +6,8 @@
     "test:ui": "node tests/ui_smoke.cjs",
     "test:storage": "node tests/ui_smoke.cjs --storage-only",
     "test:dashboard": "node tests/dashboard_controls.cjs",
-    "test:theme": "node tests/dark_theme.cjs"
+    "test:theme": "node tests/dark_theme.cjs",
+    "test:readability": "node tests/dark_readability.cjs"
   },
   "devDependencies": {
     "@fontsource-variable/outfit": "5.2.8",
