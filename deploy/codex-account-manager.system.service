@@ -1,0 +1,29 @@
+# Example system service. Replace the user, home, paths, and hostname before use.
+[Unit]
+Description=Codex Account Manager WebUI
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=codex
+Group=codex
+WorkingDirectory=/opt/codex-account-manager
+Environment=HOME=/home/codex
+Environment=CODEX_HOME=/home/codex/.codex
+Environment=CODEX_ACCOUNT_MANAGER_CONFIG=/home/codex/.config/codex-account-manager/config.json
+Environment=PATH=/home/codex/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PYTHONUNBUFFERED=1
+ExecCondition=/usr/bin/python3 /opt/codex-account-manager/app.py web check-enabled
+ExecStart=/usr/bin/python3 /opt/codex-account-manager/app.py web serve --host 127.0.0.1 --port 8765 --allowed-host manager.example.com --quiet
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=240
+KillMode=control-group
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target

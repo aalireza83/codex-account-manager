@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Dashboard · Codex Account Manager</title>
+<link rel="icon" type="image/svg+xml" href="/assets/codex-symbol-color.svg">
+<script src="/assets/theme.js?v=5"></script>
+<link rel="preload" href="/assets/outfit-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/assets/app.css?v=12">
+<script src="/assets/app.js?v=15" defer></script>
+</head>
+<body>
+<a class="skip-link" href="#mainContent">Skip to content</a>
+<div class="app-shell">
+<div id="sidebarBackdrop" class="sidebar-backdrop" hidden onclick="setSidebar(false)"></div>
+<aside id="sidebar" class="sidebar" aria-label="Main navigation">
+  <a class="brand" href="#dashboard" onclick="showView('dashboard')"><span class="logo"><img src="/assets/codex-symbol-color.svg" width="44" height="44" alt=""></span><span>Codex<span class="brand-subtitle">Account Manager</span></span></a>
+  <button id="sidebarClose" class="icon-button sidebar-close" aria-label="Close navigation" onclick="setSidebar(false)">×</button>
+  <nav class="tabs" aria-label="Accounts and settings">
+<button class="menu-item active" data-view="dashboard" onclick="showView('dashboard',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M3 13h7V3H3zm11 8h7V11h-7zM3 21h7v-4H3zM14 7h7V3h-7z"/></svg><span>Dashboard</span></button>
+<button class="menu-item" data-view="accounts" onclick="showView('accounts',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span>Accounts</span></button>
+<button class="menu-item " data-view="api-accounts" onclick="showView('api-accounts',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 7-5 5 5 5m8-10 5 5-5 5m-3-14-2 18"/></svg><span>API accounts</span></button>
+<button class="menu-item " data-view="diagnostics" onclick="showView('diagnostics',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg><span>Diagnostics</span></button>
+<button class="menu-item activity-menu" data-view="activity" onclick="showView('activity',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M4 20h16M7 16v-5m5 5V4m5 12V8"/></svg><span>Activity</span></button>
+<button class="menu-item " data-view="settings" onclick="showView('settings',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="15" cy="17" r="3"/></svg><span>Settings</span></button>
+</nav>
+</aside>
+<div class="workspace">
+<header class="topbar">
+  <div class="topbar-left"><button id="sidebarToggle" class="icon-button" aria-label="Open navigation" aria-expanded="false" aria-controls="sidebar" onclick="setSidebar(true)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button></div>
+  <div class="topbar-right"><button id="themeToggle" class="icon-button" aria-label="Switch to dark mode" aria-pressed="false" onclick="toggleTheme()"><svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M21 13a9 9 0 0 1-10-10 9 9 0 1 0 10 10Z"/></svg><svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></svg></button></div>
+</header>
+<main id="mainContent" class="main-content" tabindex="-1">
+  <div class="page-heading"><h1 id="pageTitle">Dashboard</h1></div>
+  <div id="banner" class="banner" role="status" aria-live="polite"></div>
+<section id="view-dashboard" class="view active">
+<div class="actions header-actions"><button class="primary" id="refreshWorkspace" onclick="refreshWorkspace(true)">Refresh usage</button><button onclick="restartServices(this)">Restart services</button></div>
+<div id="dashboardAccounts" class="dashboard-accounts"><div class="empty">Loading accounts…</div></div>
+
+</section>
+<section id="view-accounts" class="view">
+<div class="actions section-toolbar"><button class="primary" onclick="openAccountDialog('login')">Add account</button><button id="toggleNativeExport" aria-expanded="false" aria-controls="exportDialog" aria-haspopup="dialog" onclick="toggleExport('accounts')">Export</button><button id="refreshAccountUsage" onclick="refreshPageUsage('accounts',this)">Refresh usage</button></div>
+<div class="overview-grid native-overview" aria-label="Account overview">
+<div class="stat-card"><span class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></span><span class="stat-label">ChatGPT accounts</span><strong id="statAccounts">—</strong></div>
+
+<div class="stat-card"><span class="stat-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg></span><span class="stat-label">Active account</span><strong id="statActive" class="stat-name">—</strong><span id="statActiveType" class="sub">Loading configuration…</span></div>
+</div>
+  <div class="panel">
+    <div class="section-head"><div class="section-title"><h2>ChatGPT accounts</h2></div></div>
+    <div id="meta" class="meta"></div>
+    <div id="grid" class="grid"><div class="empty">Loading…</div></div>
+  </div>
+</section>
+<section id="view-api-accounts" class="view">
+<div class="actions section-toolbar"><button class="primary" onclick="openAccountDialog('add-api')">Add API account</button><button id="toggleApiExport" aria-expanded="false" aria-controls="exportDialog" aria-haspopup="dialog" onclick="toggleExport('api')">Export</button><button id="refreshApiUsage" onclick="refreshPageUsage('api',this)">Refresh usage</button></div>
+<div class="overview-grid api-overview"><div class="stat-card"><span class="stat-icon purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 7-5 5 5 5m8-10 5 5-5 5m-3-14-2 18"/></svg></span><span class="stat-label">API accounts</span><strong id="statProfiles">—</strong></div></div>
+  <div class="panel">
+    <div class="section-head"><div class="section-title"><h2>API accounts</h2></div><div id="activeProfileState" class="sub">Loading…</div></div>
+    <div id="apiAccountGrid" class="api-grid"><div class="empty">No API accounts yet.</div></div>
+  </div>
+</section>
+<section id="view-diagnostics" class="view"><div class="panel"><div class="section-head"><div class="section-title"><h2>Account and configuration health</h2></div></div><p class="sub">Check stored accounts, authentication snapshots, API profiles, configuration, and file permissions. Diagnostics do not call OpenAI or remove data.</p><div class="actions"><button onclick="runDoctor(false,this)">Check health</button><button onclick="runDoctor(true,this)">Fix private file permissions</button></div><pre id="doctorReport" role="status" aria-live="polite">No checks run yet.</pre></div></section>
+<section id="view-activity" class="view">
+<div id="dashboardStatistics">
+<div class="overview-grid dashboard-statistics">
+<div class="stat-card"><span class="stat-label">Successful Pings</span><strong id="statPings">—</strong></div>
+<div class="stat-card"><span class="stat-label">Successful switches</span><strong id="statSwitches">—</strong></div>
+<div class="stat-card"><span class="stat-label">Failed operations</span><strong id="statFailures">—</strong></div>
+</div>
+<div class="panel"><div id="activitySince" class="sub"></div><div id="activityTable" class="activity-table"><div class="empty">Loading statistics…</div></div></div>
+</div>
+</section>
+<section id="view-settings" class="view">
+  <div class="panel">
+
+    <div class="settings-grid">
+      <div class="setting setting-switch"><div class="setting-copy"><label>Restart after account switch</label><div id="restartAfterSwitchState" class="setting-description">Loading…</div></div><label class="switch" title="Restart after account switch"><input id="restartAfterSwitchToggle" type="checkbox" aria-label="Restart after account switch" onchange="setRestartAfterSwitch(this.checked,this)"><span class="switch-track"></span></label></div>
+      <div class="setting setting-switch"><div class="setting-copy"><label>Auto Ping</label><div id="autoPingState" class="setting-description">Ping selected accounts after their 5-hour reset.</div></div><label class="switch" title="Auto Ping"><input id="autoPingToggle" type="checkbox" aria-label="Auto Ping" onchange="setAutoPing(this.checked,this)"><span class="switch-track"></span></label></div>
+    </div>
+    <div class="setting setting-switch" style="margin-top:12px"><div class="setting-copy"><label>Enable WebUI</label><div id="webuiState" class="setting-description">Disabling closes this web server. Re-enable and start it from CLI.</div></div><label class="switch" title="Enable WebUI"><input id="webuiToggle" type="checkbox" aria-label="Enable WebUI" checked onchange="setWebUI(this)"><span class="switch-track"></span></label></div>
+    <div class="actions" style="margin-top:12px"><button onclick="runAutoPingOnce(this)">Check Auto Ping now</button><input id="restartService" type="hidden" value="app"><button onclick="restartSelectedServices(this)">Restart Codex app server</button></div>
+    <div class="restart-command-editor">
+      <h2>Restart commands</h2>
+      <p class="sub">One command per line. Used by manual restarts and automatic restarts after switching.</p>
+      <div class="form-grid">
+        <div class="wide"><label for="restartAppCommands">Codex app server</label><textarea id="restartAppCommands" spellcheck="false" autocomplete="off" oninput="restartCommandsDirty=true" disabled></textarea></div>
+      </div>
+      <div class="actions"><button id="saveRestartCommands" class="primary" onclick="saveRestartCommands(this)" disabled>Save commands</button><button id="defaultRestartCommands" onclick="restoreRestartCommandDefaults()" disabled>Use defaults</button></div>
+      <div id="restartCommandsState" class="sub" role="status" aria-live="polite"></div>
+      <details><summary>Command syntax</summary><p class="sub">Commands run in order as the server user and stop on failure. Quoted arguments are supported. For shell operators, use an explicit <code>bash -lc '…'</code>. Each configured command has a 60-second timeout.</p></details>
+    </div>
+    <details><summary>Auto Ping state / last check</summary><pre id="autoPingReport"></pre></details>
+    <details><summary>WebUI server status</summary><pre id="statusRaw"></pre></details>
+  </div>
+</section>
+<details id="serviceOutputBox" style="display:none"><summary>Restart command output</summary><pre id="serviceOutput"></pre></details>
+</main></div></div>
+
+<div id="accountDialog" class="modal" role="dialog" aria-modal="true" aria-labelledby="accountDialogTitle" onclick="if(event.target===this)closeAccountDialog()">
+<div class="modal-card account-dialog-card">
+<div class="dialog-heading"><h2 id="accountDialogTitle">Add account</h2><button class="icon-button" aria-label="Close account dialog" onclick="closeAccountDialog()">×</button></div>
+<div id="nativeDialogTabs" class="actions dialog-tabs"><button id="dialogLoginTab" onclick="openAccountDialog('login')">Login</button><button id="dialogImportTab" onclick="openAccountDialog('import')">Import accounts</button></div>
+<div id="dialogBanner" class="banner" role="status" aria-live="polite"></div>
+<section id="view-login" class="dialog-pane" hidden>
+  <div class="panel">
+    <div class="section-head"><div class="section-title"><h2>Add ChatGPT account</h2></div></div>
+    <div class="manager-box">
+      <div class="form-grid">
+        <div><label for="loginAlias">Alias (optional)</label><input id="loginAlias" maxlength="100" autocomplete="off" placeholder="Work, Personal…"></div>
+        <div><label for="loginMethod">Login method</label><select id="loginMethod"><option value="browser">Browser OAuth</option><option value="manual">Browser OAuth · paste callback URL</option><option value="device">Device code · remote / headless</option></select></div>
+        <div class="wide sub">Browser login uses localhost:1455. On a remote server, use device login or paste the full callback URL after signing in. The new account is saved without changing the active account.</div>
+        <button id="loginStart" class="primary wide" onclick="startLogin()">Start login</button>
+      </div>
+      <div id="loginSession" hidden>
+        <p id="loginMessage" role="status" aria-live="polite"></p>
+        <p id="loginWarning" class="secret-note"></p>
+        <div id="loginLinkBox" class="login-link-box" hidden>
+          <label for="loginUrl">Sign-in link</label>
+          <div class="login-link-row">
+            <input id="loginUrl" type="url" readonly autocomplete="off" spellcheck="false" aria-label="Sign-in link" onclick="this.select()">
+            <button id="copyLoginLink" class="login-link-action" aria-label="Copy sign-in link" title="Copy sign-in link" onclick="copyLoginLink(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg></button>
+            <a id="loginLink" class="login-link-action" target="_blank" rel="noopener noreferrer" aria-label="Open sign-in link" title="Open sign-in link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3h7v7m0-7L10 14m0-11H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5"/></svg></a>
+          </div>
+          <span id="loginCopyStatus" class="sub" role="status" aria-live="polite"></span>
+        </div>
+        <p id="loginDeviceCode" style="font-size:24px;font-family:monospace"></p>
+        <div id="loginCallbackForm" class="form-grid">
+          <div class="wide"><label for="loginCallback">Full callback URL</label><input id="loginCallback" type="password" autocomplete="off" placeholder="http://localhost:1455/auth/callback?code=…&amp;state=…"></div>
+        </div>
+        <div class="login-session-actions">
+          <button id="loginComplete" class="primary" onclick="completeLogin(this)">Complete login</button>
+          <button id="loginCancel" onclick="cancelLogin()">Cancel login</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<section id="view-import" class="dialog-pane" hidden>
+  <div class="panel">
+
+    <div class="notice secret-note">Importing adds accounts without switching the active account.</div>
+    <div class="manager-box">
+      <div class="form-grid">
+        <div><label for="authImportFormat">Input format</label><select id="authImportFormat"><option value="auto">Auto detect and normalize</option><option value="standard">Standard or compatible JSON</option><option value="cpa">CLIProxyAPI (convert to Standard)</option></select></div>
+        <div><label for="authImportAlias">Alias (optional, single account only)</label><input id="authImportAlias" maxlength="100" autocomplete="off" placeholder="e.g. work"></div>
+        <div class="wide"><label for="authImportText">Authentication JSON</label><textarea id="authImportText" autocomplete="off" spellcheck="false" placeholder='Paste a standard auth.json object, a standard JSON array, or a CLIProxyAPI token object'></textarea></div>
+        <button id="authImportButton" class="primary wide" onclick="importCodexAuth(this)">Import accounts</button>
+      </div>
+    </div>
+    <details id="authImportOutputBox" class="auth-import-output"><summary>Import result</summary><pre id="authImportOutput"></pre></details>
+  </div>
+</section>
+<section id="view-add-api" class="dialog-pane" hidden>
+  <div class="panel">
+    <div class="section-head"><div class="section-title"><h2 id="profileFormTitle">Add API account</h2></div></div>
+    <div class="manager-box">
+      <h3>API account details</h3>
+      <div class="notice" id="profileFormNotice">Blank optional fields keep the current Codex setting.</div>
+      <div class="form-grid">
+        <div><label for="profileName">Account name</label><input id="profileName" placeholder="QCST API"></div>
+        <div class="wide"><label for="profileBaseUrl">Base URL</label><select id="profileBaseUrl"><option value="https://ttmapi.site/v1">https://ttmapi.site/v1</option></select></div>
+        <div class="wide"><label for="profileApiKey">API key</label><input id="profileApiKey" type="password" autocomplete="new-password" placeholder="sk-…"></div>
+        <div class="wide"><label for="profileUsageUrl">Usage URL (optional)</label><input id="profileUsageUrl" type="url" value="https://ttmapi.site/v1/usage" placeholder="https://ttmapi.site/v1/usage"></div>
+        <div><label for="profileModel">Model (optional)</label><input id="profileModel" placeholder="Use Codex default"></div>
+        <div><label for="profileReasoning">Reasoning effort</label><select id="profileReasoning"><option value="">Use Codex default</option><option>high</option><option>medium</option><option>low</option><option>minimal</option><option>xhigh</option></select></div>
+        <label class="inline-check wide"><input id="profileCockpitHeaders" type="checkbox" checked onchange="profileCockpitChanged=true"> Include cockpit headers</label>
+        <details class="wide"><summary>Advanced account fields</summary><label for="profileAdvanced">JSON: HTTP headers, approval policy, sandbox mode, and model catalog</label><textarea id="profileAdvanced" spellcheck="false" placeholder='{"http_headers":{},"approval_policy":"","sandbox_mode":"","model_catalog_json":""}'></textarea></details>
+        <button id="saveProfileButton" class="primary wide" onclick="saveProfile(this)">Create API account</button>
+        <button id="cancelProfileEditButton" class="wide" style="display:none" onclick="closeAccountDialog()">Close</button>
+      </div>
+      <div id="profileList" class="list" hidden></div>
+    </div>
+    <div class="manager-box import-box">
+      <h3>Paste config.toml</h3>
+      <div class="notice">Paste TOML, then parse it to fill the account fields.</div>
+      <div class="form-grid">
+        <div class="wide"><textarea aria-label="Configuration TOML" id="profileImportText" placeholder="model_provider = ...&#10;model = ...&#10;&#10;[model_providers.example]&#10;..."></textarea></div>
+        <button class="primary wide" onclick="parseProfileText(this)">Parse text and fill fields</button>
+      </div>
+    </div>
+  </div>
+</section>
+<div class="dialog-footer"><span id="draftState" class="sub" role="status" aria-live="polite"></span><button onclick="discardDialogDraft()">Discard draft</button></div>
+</div></div>
+
+<div id="exportDialog" class="modal" role="dialog" aria-modal="true" aria-labelledby="exportDialogTitle" onclick="if(event.target===this)closeExportDialog()">
+<div class="modal-card account-dialog-card export-dialog-card">
+<div class="dialog-heading"><h2 id="exportDialogTitle">Export accounts</h2><button class="icon-button" aria-label="Close export dialog" onclick="closeExportDialog()">×</button></div>
+<div id="exportBanner" class="banner" role="status" aria-live="polite"></div>
+<div id="view-export" class="export-pane" hidden>
+  <div class="panel">
+    <div class="form-grid">
+      <div><label for="exportFormat">Export format</label><select id="exportFormat"><option value="standard">Standard auth JSON</option><option value="cpa">CLIProxyAPI JSON</option></select></div>
+      <div><label for="exportScope">Accounts to export</label><select id="exportScope" onchange="updateExportControls()"><option value="all">All accounts</option><option value="selected">Selected accounts</option></select></div>
+      <fieldset class="wide"><legend class="export-legend">Select accounts</legend><div id="exportAccountsList" class="list"><div class="empty">Loading…</div></div></fieldset>
+      <div id="exportSelectionState" class="sub wide" role="status" aria-live="polite"></div>
+      <div class="wide"><button id="exportButton" class="primary" onclick="exportAccounts(this)" disabled>Download export</button></div>
+    </div>
+  </div>
+</div>
+<div id="apiExportPanel" class="export-pane" hidden><div class="panel"><div class="form-grid">
+<div><label for="apiExportScope">API accounts to export</label><select id="apiExportScope" onchange="updateApiExportControls()"><option value="all">All API accounts</option><option value="selected">Selected API accounts</option></select></div>
+<fieldset class="wide"><legend class="export-legend">Select API accounts</legend><div id="apiExportList" class="list"></div></fieldset>
+<div id="apiExportSelectionState" class="sub wide" role="status" aria-live="polite"></div>
+<div class="wide"><button id="apiExportButton" class="primary" onclick="exportApiAccounts(this)" disabled>Download API export</button></div>
+</div></div></div>
+</div></div>
+
+<div id="aliasModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="aliasModalTitle" onclick="if(event.target===this)closeAliasEditor()">
+  <div class="modal-card">
+    <h2 id="aliasModalTitle">Account alias</h2>
+    <div class="sub">Set a memorable name for this account, or clear its current alias.</div>
+    <input id="aliasInput" aria-label="Account alias" type="text" maxlength="100" autocomplete="off" placeholder="e.g. work" onkeydown="if(event.key==='Enter')saveAlias()">
+    <div id="aliasError" class="modal-error"></div>
+    <div class="modal-actions"><button onclick="closeAliasEditor()">Cancel</button><button id="clearAliasButton" class="danger" onclick="clearAlias()">Clear alias</button><button id="saveAliasButton" class="primary" onclick="saveAlias()">Save alias</button></div>
+  </div>
+</div>
+
+
+</body>
+</html>

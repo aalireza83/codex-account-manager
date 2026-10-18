@@ -1,0 +1,314 @@
+@import 'tailwindcss' source('../');
+@plugin '@tailwindcss/forms';
+@import '../vendor/tailadmin/theme.css';
+@theme { --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+@font-face { font-family: Outfit; font-style: normal; font-weight: 100 900; font-display: swap; src: url('/assets/outfit-latin.woff2') format('woff2'); }
+@layer base {
+  * { @apply border-gray-200 dark:border-gray-800; caret-color: transparent; }
+  body { cursor: default; @apply m-0 bg-gray-50 font-outfit text-sm text-gray-700 antialiased dark:bg-gray-900 dark:text-gray-300; }
+  /* Static content never shows a typing caret, including caret-browsing mode.
+     Keep ordinary text selection/copying and keyboard focus intact. */
+  :is(input:not([type]), input[type=text], input[type=password], input[type=email], input[type=url], input[type=search], input[type=tel], input[type=number], textarea):not(:disabled):not([readonly]) {
+    cursor: text;
+  }
+  :is(input:not([type]), input[type=text], input[type=password], input[type=email], input[type=url], input[type=search], input[type=tel], input[type=number], textarea):not(:disabled):not([readonly]):focus {
+    caret-color: auto;
+  }
+  select { cursor: pointer; }
+  :is(input,textarea)[readonly] { cursor: default; }
+  h1,h2,h3 { @apply font-semibold text-gray-800 dark:text-white/90; }
+  h1 { @apply text-title-xs; } h2 { @apply text-lg; } h3 { @apply mb-4 text-base; }
+  button { @apply inline-flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-theme-xs transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-45 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/5; }
+  button:focus-visible, a:focus-visible, summary:focus-visible { @apply outline-2 outline-offset-4 outline-brand-500; }
+  button.primary, button.success, button.test-button { @apply border-brand-500 bg-brand-500 text-white hover:border-brand-600 hover:bg-brand-600; }
+  button.danger { @apply border-error-200 bg-error-50 text-error-700 hover:bg-error-100 dark:border-error-500/20 dark:bg-error-500/10 dark:text-error-400 dark:hover:bg-error-500/20; }
+  input:not([type=checkbox]),select,textarea { @apply w-full min-w-0 rounded-lg border border-gray-300 bg-transparent px-3.5 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-800; }
+  select { @apply pr-10; } option { @apply bg-white text-gray-800 dark:bg-gray-900 dark:text-gray-200; }
+  input[type=checkbox] { @apply size-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500/20 dark:border-gray-600 dark:bg-gray-800; }
+  textarea { @apply min-h-48 resize-y font-mono text-xs leading-6; }
+  label { @apply text-sm font-medium text-gray-700 dark:text-gray-300; }
+  details { @apply mt-4 min-w-0 rounded-xl border bg-gray-50 p-4 text-gray-500 dark:bg-gray-900/50 dark:text-gray-400; }
+  summary { @apply cursor-pointer font-medium text-gray-700 dark:text-gray-300; }
+  pre { @apply mt-3 max-w-full overflow-auto whitespace-pre-wrap break-words rounded-lg bg-gray-100 p-4 font-mono text-xs leading-6 text-gray-600 dark:bg-gray-950 dark:text-gray-300; }
+  a { @apply text-brand-500 dark:text-brand-400; }
+  p { @apply my-3; }
+  [hidden] { display:none!important; }
+}
+@layer components {
+  .app-shell { @apply min-h-screen; }
+  .sidebar { @apply fixed inset-y-0 left-0 z-40 flex w-[290px] -translate-x-full flex-col border-r bg-white px-5 transition-transform duration-200 xl:translate-x-0 dark:bg-gray-900; }
+  .sidebar.open { @apply translate-x-0; }
+  .brand { @apply flex items-center gap-3 py-8 text-2xl font-semibold tracking-tight text-gray-900 dark:text-white; }
+  .logo { @apply flex size-11 shrink-0 items-center justify-center rounded-xl bg-brand-500 text-white; }
+  .brand-subtitle { @apply block text-xs font-normal tracking-normal text-gray-500 dark:text-gray-400; }
+  .tabs { @apply flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pt-3; }
+  .tabs button { @apply menu-item menu-item-inactive justify-start border-0 bg-transparent py-3 shadow-none; }
+  .tabs button.active { @apply menu-item-active; }
+  .tabs svg { @apply size-6 shrink-0; }
+  .sidebar-backdrop { @apply fixed inset-0 z-30 bg-gray-900/50 backdrop-blur-xs xl:hidden; }
+  .workspace { @apply min-w-0 xl:ml-[290px]; }
+  .topbar { @apply sticky top-0 z-20 flex h-[72px] items-center justify-between gap-3 border-b bg-white px-4 md:px-6 dark:bg-gray-900; }
+  .topbar-left,.topbar-right { @apply flex items-center gap-4; }
+  .icon-button { @apply size-11 shrink-0 rounded-full border p-2.5 shadow-none; }
+  .icon-button svg { @apply size-5; }
+  #sidebarToggle,.sidebar-close { @apply xl:hidden; }
+  .sidebar-close { @apply absolute right-3 top-8 size-8 min-h-8 border-0 p-0 text-2xl; }
+  .sun-icon { @apply hidden; } .dark .sun-icon { @apply block; } .dark .moon-icon { @apply hidden; }
+  .main-content { @apply mx-auto max-w-[1680px] p-4 pb-12 outline-none md:p-6 md:pb-12; }
+  .page-heading { @apply mb-6 flex flex-wrap items-center justify-between gap-4; }
+  .page-heading p { @apply mb-0 mt-1; }
+  .actions { @apply flex flex-wrap items-center gap-2; }
+  .actions select { @apply w-auto max-w-full; }
+  .header-actions { @apply mb-6; }
+  .sub { @apply text-xs leading-5 text-gray-500 dark:text-gray-400; }
+  .view { @apply hidden; } .view.active { @apply block; }
+  .panel { @apply mb-6 min-w-0 rounded-2xl border bg-white p-4 sm:p-6 dark:bg-white/[0.03]; }
+  .section-head { @apply mb-4 flex flex-wrap items-center justify-between gap-2; }
+  .section-title { @apply flex items-center gap-2; }
+  .overview-grid { @apply mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3; }
+  .stat-card { @apply grid min-w-0 grid-cols-[1fr_auto] items-center gap-x-4 rounded-2xl border bg-white p-5 dark:bg-white/[0.03]; }
+  .stat-icon { @apply col-start-2 row-span-3 flex size-12 items-center justify-center rounded-xl bg-brand-50 text-brand-500 dark:bg-brand-500/10 dark:text-brand-400; }
+  .stat-icon svg { @apply size-6; } .stat-icon.purple { @apply bg-theme-purple-500/10 text-theme-purple-500; } .stat-icon.green { @apply bg-success-500/10 text-success-600 dark:text-success-400; }
+  .stat-label { @apply mb-2 text-sm text-gray-500 dark:text-gray-400; }
+  .stat-card strong { @apply mb-1 min-w-0 truncate text-3xl font-semibold text-gray-800 dark:text-white/90; }
+  .stat-card .stat-name { @apply text-xl; }
+  .meta { @apply mb-4 text-xs text-gray-500 dark:text-gray-400; }
+  .meta span,.badge,.pill { @apply inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600 dark:bg-white/5 dark:text-gray-400; }
+  .badge { @apply mt-3; }
+  .badge.active,.pill.on { @apply bg-success-50 text-success-700 dark:bg-success-500/15 dark:text-success-400; }
+  .pill.off { @apply bg-error-50 text-error-700 dark:bg-error-500/15 dark:text-error-400; }
+  .grid,.api-grid { @apply grid grid-cols-1 gap-4; }
+  .card { @apply relative grid min-w-0 grid-cols-1 items-center gap-5 rounded-xl border p-5 transition-colors xl:grid-cols-[minmax(0,1fr)_60px_minmax(0,1fr)_130px]; }
+  .card.active { @apply border-brand-300 bg-brand-50/25 dark:border-brand-500/50 dark:bg-brand-500/5; }
+  .card>* { @apply min-w-0; }
+  .identity { @apply min-w-0; }
+  .name { @apply truncate text-base font-semibold text-gray-800 dark:text-white/90; }
+  .email { @apply mt-1 truncate text-xs text-gray-500 dark:text-gray-400; }
+  .inline-check { @apply mb-3 flex items-center gap-2 text-xs font-normal text-gray-500 dark:text-gray-400; }
+  .form-grid .inline-check { @apply mb-0; }
+  .plan { @apply w-fit rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-medium capitalize text-gray-700 dark:bg-white/5 dark:text-gray-300; }
+  .usage-stack { @apply grid gap-4 sm:grid-cols-2 xl:grid-cols-1; }
+  .metric .label { @apply mb-1 text-xs text-gray-500 dark:text-gray-400; }
+  .metric .value { @apply break-words text-xs font-medium leading-5 text-gray-800 dark:text-gray-200; }
+  .bar { @apply mt-2 h-1.5 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800; }
+  .bar>i { @apply block h-full rounded-full bg-brand-500; }
+  .bar.low>i { @apply bg-error-500; } .bar.medium>i { @apply bg-warning-500; }
+  .account-actions { @apply grid grid-cols-2 gap-2 xl:grid-cols-1; }
+  .account-actions button { @apply min-w-0 px-3 text-xs; }
+  .ping-control { @apply mt-3 flex max-w-xs items-center justify-between gap-3 rounded-lg bg-gray-50 p-2.5 text-xs text-gray-600 dark:bg-gray-900/70 dark:text-gray-400; }
+  .ping-error { @apply break-words text-error-600 dark:text-error-400; }
+  .auto-ping-state { @apply mt-1 text-[10px] leading-4 text-gray-500 dark:text-gray-400; }
+  .switch { @apply relative inline-flex shrink-0 cursor-pointer items-center; }
+  .switch input { @apply absolute size-full cursor-pointer opacity-0; }
+  .switch-track { @apply pointer-events-none h-6 w-11 rounded-full bg-gray-200 transition-colors dark:bg-gray-700; }
+  .switch-track:after { content:''; @apply absolute left-0.5 top-0.5 size-5 rounded-full bg-white shadow-theme-sm transition-transform; }
+  .switch input:checked+.switch-track { @apply bg-brand-500; }
+  .switch input:checked+.switch-track:after { @apply translate-x-5; }
+  .switch input:focus-visible+.switch-track { @apply outline-2 outline-offset-4 outline-brand-500; }
+  .switch input:disabled+.switch-track { @apply opacity-40; }
+  .api-card { @apply min-w-0 rounded-xl border p-5; }
+  .api-card.active { @apply border-brand-300 bg-brand-50/25 dark:border-brand-500/50 dark:bg-brand-500/5; }
+  .api-card .account-actions { @apply mt-4 sm:grid-cols-4; }
+  .api-usage { @apply mt-4 rounded-xl border bg-gray-50 p-3 dark:bg-gray-900/60; }
+  .api-usage-grid { @apply grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-4; }
+  .api-usage-item { @apply min-w-0 rounded-lg border bg-white p-3 dark:bg-white/5; }
+  .api-usage-item span { @apply mb-1 block text-xs text-gray-500 dark:text-gray-400; }
+  .api-usage-item strong { @apply break-words text-sm font-medium text-gray-800 dark:text-gray-200; }
+  .api-usage-models { @apply mt-4 text-xs leading-6 text-gray-500 dark:text-gray-400; }
+  .api-usage-daily { @apply mt-4 overflow-x-auto text-xs; }
+  .api-usage-daily table { @apply mt-2 w-full text-left; }
+  .api-usage-daily th { @apply bg-gray-100 font-medium dark:bg-gray-800; }
+  .api-usage-daily th,.api-usage-daily td { @apply whitespace-nowrap border-b px-3 py-3; }
+  .api-usage-raw pre,.auth-import-output pre { @apply max-h-96; }
+  .manager-box { @apply min-w-0 rounded-xl border p-4 sm:p-5; }
+  .form-grid { @apply grid grid-cols-1 gap-5 md:grid-cols-2; }
+  .form-grid label:not(.inline-check):not(.export-row) { @apply mb-2 block; }
+  .form-grid .wide { @apply md:col-span-2; }
+  .form-grid details { @apply mt-0; }
+  .form-grid details textarea { @apply mt-2; }
+  .form-grid details label { @apply mt-3 text-xs; }
+  .import-box { @apply mt-5; }
+  .export-legend { @apply text-sm font-medium text-gray-700 dark:text-gray-300; }
+  .export-row { @apply flex min-w-0 cursor-pointer items-center gap-3 rounded-lg border p-4 hover:bg-gray-50 dark:hover:bg-white/5; }
+  .export-row>span { @apply min-w-0; }
+  .export-row .email { @apply block; }
+  .list { @apply mt-5 grid gap-3; }
+  .list-row { @apply flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-lg border p-3; }
+  .list-row>div:first-child { @apply min-w-0; }
+  .list-title { @apply break-words font-medium text-gray-800 dark:text-gray-200; }
+  .list-meta { @apply mt-2 break-words text-xs leading-5 text-gray-500 dark:text-gray-400; }
+  .list-actions { @apply flex flex-wrap gap-2; }
+  .list-actions button { @apply min-h-8 px-3 py-1.5 text-xs; }
+  .notice,.api-usage-note { @apply mb-4 rounded-lg border border-brand-100 bg-brand-50 px-4 py-3 text-xs leading-5 text-brand-700 dark:border-brand-500/20 dark:bg-brand-500/10 dark:text-brand-300; }
+  .api-usage-note { @apply mb-0 mt-4; }
+  .secret-note { @apply text-warning-700 dark:text-warning-400; }
+  .notice.secret-note { @apply border-warning-100 bg-warning-50 text-warning-700 dark:border-warning-500/20 dark:bg-warning-500/10 dark:text-warning-400; }
+  .settings-grid { @apply grid gap-4 2xl:grid-cols-2; }
+  .setting { @apply rounded-xl border p-5; }
+  .setting-switch { @apply flex items-center justify-between gap-4; }
+  .setting-description { @apply mt-1 text-xs leading-5 text-gray-500 dark:text-gray-400; }
+  .setting-copy { @apply min-w-0; }
+  #statusRaw { @apply mt-4 border-t pt-4; }
+  #loginSession { @apply mt-6 border-t pt-4; }
+  #loginDeviceCode { @apply w-fit rounded-lg bg-brand-50 px-4 py-2 text-brand-600 dark:bg-brand-500/15 dark:text-brand-400; }
+  .banner { @apply mb-6 hidden whitespace-pre-wrap break-words rounded-xl border px-4 py-3; }
+  .banner.ok { @apply block border-success-200 bg-success-50 text-success-700 dark:border-success-500/20 dark:bg-success-500/10 dark:text-success-400; }
+  .banner.err { @apply block border-error-200 bg-error-50 text-error-700 dark:border-error-500/20 dark:bg-error-500/10 dark:text-error-400; }
+  .usage-refresh-status { @apply text-xs leading-5 text-warning-700 dark:text-warning-400; overflow-wrap:anywhere; }
+  .usage-refresh-status.failed { @apply text-error-600 dark:text-error-400; }
+  .empty { @apply rounded-xl border border-dashed bg-gray-50 px-5 py-12 text-center text-sm text-gray-500 dark:bg-gray-900/30 dark:text-gray-400; }
+  .auth-import-output { @apply hidden; } .auth-import-output.visible { @apply block; }
+  .modal { @apply fixed inset-0 z-50 hidden items-center justify-center overflow-y-auto bg-gray-900/50 p-4 backdrop-blur-sm; }
+  .modal.open { @apply flex; }
+  .modal-card { @apply my-auto w-full max-w-lg rounded-2xl border bg-white p-6 shadow-theme-xl dark:bg-gray-900; }
+  #aliasInput { @apply mb-2 mt-5; }
+  .modal-error { @apply min-h-5 text-xs text-error-600 dark:text-error-400; }
+  .modal-actions { @apply mt-4 flex flex-wrap justify-end gap-2; }
+  .skip-link { @apply sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-white focus:p-3; }
+}
+@media (prefers-reduced-motion: reduce) { *,*::before,*::after { transition:none!important; scroll-behavior:auto!important; } }
+@layer components {
+  .section-toolbar { @apply mb-6; }
+  .native-overview { @apply lg:grid-cols-2; }
+  .api-overview { @apply max-w-sm grid-cols-1; }
+  .account-dialog-card { @apply max-h-[calc(100dvh-2rem)] max-w-3xl overflow-y-auto; }
+  .dialog-heading { @apply mb-5 flex items-center justify-between gap-4; }
+  .dialog-tabs { @apply mb-5; }
+  .dialog-tabs button.active { @apply border-brand-500 bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-400; }
+  .dialog-pane>.panel { @apply mb-0 border-0 bg-transparent p-0; }
+  .dialog-footer { @apply mt-5 flex flex-wrap items-center justify-between gap-3 border-t pt-4; }
+  .app-shell.obscured { filter: blur(4px); }
+  #profileFormTitle { @apply sr-only; }
+}
+@layer components {
+  .activity-table { @apply mt-4 overflow-x-auto; }
+  .activity-table table { @apply w-full text-left text-sm; }
+  .activity-table th { @apply whitespace-nowrap bg-gray-50 font-medium text-gray-500 dark:bg-gray-900 dark:text-gray-400; }
+  .activity-table td,.activity-table th { @apply border-b px-4 py-4; }
+  .activity-table td { @apply whitespace-nowrap; }
+  .activity-table .email { @apply block; }
+}
+@layer components {
+  .dashboard-accounts { @apply grid gap-3; }
+  .dashboard-account { @apply flex min-w-0 flex-wrap items-center gap-4 rounded-xl border bg-white p-4 dark:bg-white/[0.03]; }
+  .dashboard-account.active { @apply border-brand-300 bg-brand-50/40 dark:border-brand-500/50 dark:bg-brand-500/5; }
+  .dashboard-identity { @apply flex min-w-0 flex-1 items-center gap-3; }
+  .dashboard-identity>div { @apply min-w-0; }
+  .dashboard-type { @apply flex size-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-xs font-semibold text-gray-500 dark:bg-white/5 dark:text-gray-400; }
+  .dashboard-active { @apply ml-2 rounded-full bg-success-50 px-2 py-0.5 text-[10px] font-medium text-success-700 dark:bg-success-500/15 dark:text-success-400; }
+  .dashboard-ping-status { @apply text-xs text-gray-500 dark:text-gray-400; }
+  .dashboard-ping-status.failed { @apply text-error-600 dark:text-error-400; }
+  .dashboard-account-actions { @apply flex w-full shrink-0 gap-2 sm:w-auto; }
+  .dashboard-account-actions button { @apply flex-1 sm:min-w-24; }
+  .dashboard-statistics { @apply mt-4; }
+  #dashboardStatistics { @apply bg-transparent; }
+}
+
+@layer base {
+  .dark body {
+    background: radial-gradient(ellipse at 80% 0%, #20234b55, transparent 55%), #0c1220;
+    color: #d3dced;
+  }
+  .dark * { border-color: #29354a; }
+  .dark button { background-color: #202d43; border-color: #34435d; color: #dce5f5; }
+  .dark button:hover:not(:disabled) { background-color: #2b3b55; border-color: #536788; }
+  button.primary,button.success,button.test-button {
+    background-image: linear-gradient(135deg, #7770ee, #465fff);
+    border-color: #6869ee;
+    box-shadow: 0 3px 10px #465fff20;
+  }
+  .dark button.primary,.dark button.success,.dark button.test-button { color: #fff; border-color: #7c7cf5; }
+  .dark button.primary:hover:not(:disabled) { background-image: linear-gradient(135deg, #8c82ff, #6075ff); }
+  .dark button.danger { background: #ef444412; border-color: #f8717138; color: #ffa6a6; }
+  .dark button.danger:hover:not(:disabled) { background: #ef444425; border-color: #f8717160; }
+  .dark :is(input:not([type=checkbox]),select,textarea) { background-color: #101a2c; border-color: #34435d; color: #edf2fc; }
+  .dark :is(input:not([type=checkbox]),select,textarea):focus { border-color: #8c82ff; box-shadow: 0 0 0 3px #8c82ff25; }
+  .dark option { background: #162136; color: #edf2fc; }
+  .dark details { background-color: #101a2c; }
+  .dark pre { background-color: #0b1322; color: #cbd7ed; }
+}
+@layer components {
+  .logo { background: transparent; box-shadow: 0 4px 18px #6872f52b; }
+  .logo img { width: 44px; height: 44px; display: block; border-radius: 12px; }
+  .sidebar { padding-bottom: 24px; }
+  .tabs .activity-menu { margin-top: auto; }
+  .dark .sidebar { background: #10192a; border-color: #29354a; }
+  .dark .topbar { background: #10192aeb; border-color: #29354a; backdrop-filter: blur(16px); }
+  .dark :is(.panel,.stat-card,.dashboard-account,.modal-card) { background-color: #162136; border-color: #2b3a54; box-shadow: 0 6px 24px #00000012; }
+  .dark :is(.card,.api-card,.setting,.manager-box,.export-row,.list-row) { background-color: #131e31; border-color: #2b3a54; }
+  .dark :is(.dashboard-account,.card,.api-card).active { background: linear-gradient(115deg,#252a50,#17243c); border-color: #7c7cf580; }
+  .dark .tabs button { background: transparent; color: #a8b7d2; }
+  .dark .tabs button:hover { background: #202d43; color: #e9edff; }
+  .dark .tabs button.active { background: #7770ee22; color: #c3bcff; box-shadow: inset 3px 0 #a49bff; }
+  .dark .empty { background: #111b2c; border-color: #34435d; }
+  .dark .dashboard-type { background: #818cf81a; color: #bbbaff; }
+  .dark .bar { background: #2e3c55; }
+  .bar>i { background: linear-gradient(90deg,#7d75f2,#628bff); }
+  .bar.low>i { background: #f77983; } .bar.medium>i { background: #edb65e; }
+  .dark .activity-table th { background: #101a2c; color: #a9b8d3; }
+  .dashboard-account { display: grid; grid-template-columns: minmax(0,1fr); gap: 16px; padding: 20px; }
+  .dashboard-identity { grid-row: 1; }
+  .dashboard-usage { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; min-width: 0; }
+  .dashboard-usage .usage-refresh-status { grid-column: 1/-1; }
+  .dashboard-ping-status { overflow-wrap: anywhere; }
+  .dashboard-account-actions { width: 100%; }
+  .dashboard-statistics { margin-top: 0; }
+  .restart-command-editor { margin-top: 28px; padding-top: 24px; border-top: 1px solid; border-color: inherit; }
+  .restart-command-editor textarea { min-height: 140px; }
+  .restart-command-editor .actions { margin-top: 16px; }
+  #restartCommandsState { margin-top: 12px; overflow-wrap: anywhere; }
+}
+@media (min-width: 768px) {
+  .dashboard-account { grid-template-columns: minmax(0,1fr) minmax(240px,1.3fr) auto; gap: 12px 24px; }
+  .dashboard-usage { grid-column: 2; grid-row: 1/3; }
+  .dashboard-identity { grid-column: 1; }
+  .dashboard-ping-status { grid-column: 1; grid-row: 2; }
+  .dashboard-account-actions { grid-column: 3; grid-row: 1/3; }
+}
+@layer components {
+  .form-grid :is(input:not([type=checkbox]),select,textarea),.actions select {
+    border-radius: 10px; font-size: 14px; line-height: 1.5;
+  }
+  /* Block controls have no inline caret positions before/after the field.
+     Keep label spacing in the grid instead of margins on individual inputs. */
+  .account-dialog-card .form-grid :is(input:not([type=checkbox]),select,textarea) {
+    display: block; margin: 0;
+  }
+  .account-dialog-card .form-grid :is(input:not([type=checkbox]),select) {
+    height: 44px; padding: 10px 14px; line-height: 22px;
+  }
+  .restart-command-editor textarea { border-radius: 10px; font-size: 12px; line-height: 24px; }
+}
+@layer components {
+  .account-dialog-card {
+    scrollbar-width: thin;
+    scrollbar-color: #b1b9ca transparent;
+    scrollbar-gutter: stable;
+    overscroll-behavior: contain;
+  }
+  .dark .account-dialog-card { scrollbar-color: #52617b transparent; }
+  .account-dialog-card::-webkit-scrollbar { width: 6px; height: 6px; }
+  .account-dialog-card::-webkit-scrollbar-track { background: transparent; margin-block: 16px; }
+  .account-dialog-card::-webkit-scrollbar-thumb { background: #b1b9ca; border-radius: 999px; }
+  .dark .account-dialog-card::-webkit-scrollbar-thumb { background: #52617b; }
+  .account-dialog-card::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+  .login-link-box { margin-block: 16px; }
+  .login-link-box>label { display: block; margin-bottom: 8px; }
+  .login-link-row { display: grid; grid-template-columns: minmax(0,1fr) 36px 36px; gap: 8px; align-items: center; }
+  .login-link-row #loginUrl { display: block; height: 40px; margin: 0; min-width: 0; padding: 8px 12px; font-size: 12px; cursor: text; user-select: text; }
+  .login-link-action { display: inline-flex; width: 36px; height: 36px; min-height: 36px; padding: 8px; align-items: center; justify-content: center; border: 1px solid; border-color: var(--color-gray-300); border-radius: 10px; color: var(--color-gray-600); background: transparent; }
+  .login-link-action svg { width: 18px; height: 18px; }
+  .login-link-action:hover { background: var(--color-gray-100); }
+  .dark .login-link-action { border-color: #34435d; color: #cbd7ed; }
+  .dark .login-link-action:hover { background: #2b3b55; }
+  #loginCopyStatus:not(:empty) { display: block; margin-top: 6px; }
+  .login-session-actions { display: flex; gap: 10px; margin-top: 16px; }
+  .login-session-actions button { flex: 1; min-width: 0; min-height: 42px; padding: 10px 12px; }
+}
+@layer components {
+  .export-pane>.panel { margin: 0; padding: 0; border: 0; background: transparent; box-shadow: none; }
+  .export-pane .form-grid { align-items: start; }
+  .export-pane .export-row { margin: 0; }
+  .export-pane fieldset { min-width: 0; }
+}

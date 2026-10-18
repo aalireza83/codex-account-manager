@@ -1,0 +1,14 @@
+[Unit]
+Description=Codex Account Manager
+After=network.target
+
+[Service]
+Type=simple
+Environment="PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin"
+ExecCondition=/usr/bin/python3 %h/Projects/codex-account-manager/app.py web check-enabled
+ExecStart=/usr/bin/python3 %h/Projects/codex-account-manager/app.py web serve --host 127.0.0.1 --port 8765
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,18 @@
+{
+  "name": "codex-account-manager-ui",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/build-ui.cjs",
+    "test:ui": "node tests/ui_smoke.cjs",
+    "test:storage": "node tests/ui_smoke.cjs --storage-only",
+    "test:dashboard": "node tests/dashboard_controls.cjs"
+  },
+  "devDependencies": {
+    "@fontsource-variable/outfit": "5.2.8",
+    "@tailwindcss/cli": "4.1.18",
+    "@tailwindcss/forms": "0.5.11",
+    "playwright": "1.64.1",
+    "tailwindcss": "4.1.18"
+  },
+  "license": "MIT"
+}
