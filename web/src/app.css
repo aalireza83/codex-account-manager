@@ -206,47 +206,19 @@
 }
 
 @layer base {
-  .dark body {
-    background: radial-gradient(ellipse at 80% 0%, #20234b55, transparent 55%), #0c1220;
-    color: #d3dced;
-  }
-  .dark * { border-color: #29354a; }
-  .dark button { background-color: #202d43; border-color: #34435d; color: #dce5f5; }
-  .dark button:hover:not(:disabled) { background-color: #2b3b55; border-color: #536788; }
   button.primary,button.success,button.test-button {
     background-image: linear-gradient(135deg, #7770ee, #465fff);
     border-color: #6869ee;
     box-shadow: 0 3px 10px #465fff20;
   }
-  .dark button.primary,.dark button.success,.dark button.test-button { color: #fff; border-color: #7c7cf5; }
-  .dark button.primary:hover:not(:disabled) { background-image: linear-gradient(135deg, #8c82ff, #6075ff); }
-  .dark button.danger { background: #ef444412; border-color: #f8717138; color: #ffa6a6; }
-  .dark button.danger:hover:not(:disabled) { background: #ef444425; border-color: #f8717160; }
-  .dark :is(input:not([type=checkbox]),select,textarea) { background-color: #101a2c; border-color: #34435d; color: #edf2fc; }
-  .dark :is(input:not([type=checkbox]),select,textarea):focus { border-color: #8c82ff; box-shadow: 0 0 0 3px #8c82ff25; }
-  .dark option { background: #162136; color: #edf2fc; }
-  .dark details { background-color: #101a2c; }
-  .dark pre { background-color: #0b1322; color: #cbd7ed; }
 }
 @layer components {
   .logo { background: transparent; box-shadow: 0 4px 18px #6872f52b; }
   .logo img { width: 44px; height: 44px; display: block; border-radius: 12px; }
   .sidebar { padding-bottom: 24px; }
   .tabs .activity-menu { margin-top: auto; }
-  .dark .sidebar { background: #10192a; border-color: #29354a; }
-  .dark .topbar { background: #10192aeb; border-color: #29354a; backdrop-filter: blur(16px); }
-  .dark :is(.panel,.stat-card,.dashboard-account,.modal-card) { background-color: #162136; border-color: #2b3a54; box-shadow: 0 6px 24px #00000012; }
-  .dark :is(.card,.api-card,.setting,.manager-box,.export-row,.list-row) { background-color: #131e31; border-color: #2b3a54; }
-  .dark :is(.dashboard-account,.card,.api-card).active { background: linear-gradient(115deg,#252a50,#17243c); border-color: #7c7cf580; }
-  .dark .tabs button { background: transparent; color: #a8b7d2; }
-  .dark .tabs button:hover { background: #202d43; color: #e9edff; }
-  .dark .tabs button.active { background: #7770ee22; color: #c3bcff; box-shadow: inset 3px 0 #a49bff; }
-  .dark .empty { background: #111b2c; border-color: #34435d; }
-  .dark .dashboard-type { background: #818cf81a; color: #bbbaff; }
-  .dark .bar { background: #2e3c55; }
   .bar>i { background: linear-gradient(90deg,#7d75f2,#628bff); }
   .bar.low>i { background: #f77983; } .bar.medium>i { background: #edb65e; }
-  .dark .activity-table th { background: #101a2c; color: #a9b8d3; }
   .dashboard-account { display: grid; grid-template-columns: minmax(0,1fr); gap: 16px; padding: 20px; }
   .dashboard-identity { grid-row: 1; }
   .dashboard-usage { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; min-width: 0; }
@@ -287,11 +259,9 @@
     scrollbar-gutter: stable;
     overscroll-behavior: contain;
   }
-  .dark .account-dialog-card { scrollbar-color: #52617b transparent; }
   .account-dialog-card::-webkit-scrollbar { width: 6px; height: 6px; }
   .account-dialog-card::-webkit-scrollbar-track { background: transparent; margin-block: 16px; }
   .account-dialog-card::-webkit-scrollbar-thumb { background: #b1b9ca; border-radius: 999px; }
-  .dark .account-dialog-card::-webkit-scrollbar-thumb { background: #52617b; }
   .account-dialog-card::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
   .login-link-box { margin-block: 16px; }
   .login-link-box>label { display: block; margin-bottom: 8px; }
@@ -300,8 +270,6 @@
   .login-link-action { display: inline-flex; width: 36px; height: 36px; min-height: 36px; padding: 8px; align-items: center; justify-content: center; border: 1px solid; border-color: var(--color-gray-300); border-radius: 10px; color: var(--color-gray-600); background: transparent; }
   .login-link-action svg { width: 18px; height: 18px; }
   .login-link-action:hover { background: var(--color-gray-100); }
-  .dark .login-link-action { border-color: #34435d; color: #cbd7ed; }
-  .dark .login-link-action:hover { background: #2b3b55; }
   #loginCopyStatus:not(:empty) { display: block; margin-top: 6px; }
   .login-session-actions { display: flex; gap: 10px; margin-top: 16px; }
   .login-session-actions button { flex: 1; min-width: 0; min-height: 42px; padding: 10px 12px; }
@@ -312,3 +280,5 @@
   .export-pane .export-row { margin: 0; }
   .export-pane fieldset { min-width: 0; }
 }
+
+@import './blue-dark.css';

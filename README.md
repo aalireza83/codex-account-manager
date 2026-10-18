@@ -203,6 +203,10 @@ The sign-in URL is read-only and selectable, with copy/open controls. Saved data
 loads automatically when opening the interface; **Refresh usage** requests a
 fresh remote result. The browser displays reset times in its own timezone.
 
+Dark Mode follows the [shadcn.io Blue palette](https://www.shadcn.io/theme/blue)
+through a color-only TailAdmin adapter. Light Mode and the existing layout remain
+independent. See [Dark theme](docs/dark-theme.md) for exact tokens and focused checks.
+
 ### Optional WebUI lifecycle
 
 ```bash
@@ -292,6 +296,7 @@ For browser tests:
 npx playwright install chromium
 PYTHON=python3 npm run test:storage
 PYTHON=python3 npm run test:dashboard
+PYTHON=python3 npm run test:theme       # Dark palette and Light Mode preservation
 # Optional complete UI layout/draft matrix:
 PYTHON=python3 npm run test:ui
 ```
