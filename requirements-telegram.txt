@@ -1,0 +1,2 @@
+# Optional Telegram integration; native CLI/WebUI work without this extra.
+aiogram==3.31.0

@@ -21,6 +21,22 @@ ssh -N -L 8765:127.0.0.1:8765 user@server
 Open `http://127.0.0.1:8765` locally. Do not bind an unauthenticated instance to a
 public interface.
 
+## Optional Telegram dependency
+
+Install `requirements-telegram.txt` into a virtual environment and use that
+interpreter for the WebUI process:
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements-telegram.txt
+.venv/bin/python app.py web start
+```
+
+When running under systemd, change the unit's `ExecStart` interpreter to the
+absolute path of `.venv/bin/python`, reload systemd, and restart the service.
+Then configure **Settings → Telegram bot** and send `/start` in the bot's private
+chat to show the keyboard. Native CLI/WebUI operations do not require aiogram.
+
 ## Per-user systemd service
 
 `codex-account-manager.service` expects the checkout at

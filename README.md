@@ -21,6 +21,7 @@ merge, or write another account manager's registry.
 - Configurable restart commands shared by manual and automatic restarts.
 - Optional WebUI with light/dark themes, responsive navigation, and modal forms.
 - Native account management with no third-party Python dependencies.
+- Optional aiogram Telegram bot with inline menus and account keyboards.
 
 ## Requirements
 
@@ -220,6 +221,54 @@ python3 app.py web start --host 127.0.0.1 --port 8765
 Disabling the WebUI stops its listener and worker. Re-enable it with the CLI.
 Only one WebUI instance can hold a runtime lease for a configuration. CLI account
 commands do not start a web server or background worker.
+
+## Telegram control
+
+The optional bot uses **aiogram 3**. Install its dependencies in the same Python
+environment used to launch the WebUI:
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements-telegram.txt
+.venv/bin/python app.py web start
+```
+
+For a systemd deployment, point the unit's `ExecStart` at the virtual environment's
+Python and restart the service. Native CLI/WebUI features remain available without
+aiogram; an enabled bot displays an installation hint when the dependency is absent.
+
+In **Settings → Telegram bot**, enter a bot token from @BotFather and your
+numeric Telegram admin user IDs separated by commas (for example `123456789, 987654321`), then enable and save. The token is stored in the
+private manager settings file and never returned by the settings API. Leave the
+token field blank to retain it, or use **Remove saved token** to remove it.
+
+Keep the WebUI process running. The bot uses outbound long polling through the
+[Telegram Bot API](https://core.telegram.org/bots/api#getupdates); no inbound
+webhook or public WebUI address is needed. Use a dedicated bot without an existing
+webhook or another poller. Settings changes take effect on the next poll.
+
+Send `/start` to see the account overview immediately: names/emails, active state,
+plan, remaining 5-hour and weekly limits, reset timing, credits, and usage check
+age. Every account has one inline row with three columns: **Name / email**,
+**Ping**, **Switch**. API accounts are included in the same list and selected
+with Switch; their Ping button is unavailable. There are no profile/settings
+submenus or extra commands to type.
+
+The initial overview uses cached usage, like the WebUI. **Refresh usage** updates
+native limits and supported API-provider quotas. Missing or failed usage is
+marked explicitly; credentials and raw provider errors are never displayed.
+After Ping or Switch, the same overview message updates with the result and
+active state. Lists stay together until Telegram's message or button limits
+require Previous/Next pages.
+
+Any reply keyboard left by an older release is removed on `/start`. Operation
+buttons expire after two minutes and execute only once; an expired button
+refreshes the overview. Only the configured admins in their private chats can use them. Single-user settings continue to work.
+
+Queued messages are discarded when the worker starts or its token/user changes,
+and commands older than two minutes are ignored. Failed operations return a
+generic message to keep credential and service output out of Telegram replies.
+Disabling WebUI also stops the bot.
 
 ## Independent storage
 

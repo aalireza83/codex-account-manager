@@ -7,7 +7,7 @@ checks that support it.
 ## Local setup
 
 Python 3.11 or newer is required. Python account management uses only the standard
-library. Node.js/npm is needed only for CSS builds and browser tests.
+library. The optional Telegram bot uses aiogram from `requirements-telegram.txt`. Node.js/npm is needed only for CSS builds and browser tests.
 
 ```bash
 npm ci
@@ -34,6 +34,9 @@ matrix for a documentation edit or a small isolated change.
 
 ```bash
 python3 -m unittest test_independent_storage
+# In a virtual environment, also verify the optional Telegram integration:
+python -m pip install -r requirements-telegram.txt
+python -m unittest test_telegram
 PYTHON=python3 npm run test:storage     # Account/provider storage workflows
 PYTHON=python3 npm run test:dashboard   # Dashboard operations
 PYTHON=python3 npm run test:ui          # Complete optional UI matrix

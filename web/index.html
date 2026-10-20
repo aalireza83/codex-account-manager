@@ -82,6 +82,18 @@
     <div class="setting setting-switch" style="margin-top:12px"><div class="setting-copy"><label>Enable WebUI</label><div id="webuiState" class="setting-description">Disabling closes this web server. Re-enable and start it from CLI.</div></div><label class="switch" title="Enable WebUI"><input id="webuiToggle" type="checkbox" aria-label="Enable WebUI" checked onchange="setWebUI(this)"><span class="switch-track"></span></label></div>
     <div class="actions" style="margin-top:12px"><button onclick="runAutoPingOnce(this)">Check Auto Ping now</button><input id="restartService" type="hidden" value="app"><button onclick="restartSelectedServices(this)">Restart Codex app server</button></div>
     <div class="restart-command-editor">
+      <h2>Telegram bot</h2>
+      <p class="sub">Control accounts with aiogram from your private bot chat while WebUI is running. Only the Telegram user IDs below can run commands.</p>
+      <div class="form-grid" oninput="telegramDirty=true">
+        <div><label for="telegramToken">Bot token</label><input id="telegramToken" type="password" autocomplete="new-password" placeholder="Leave blank to keep saved token"></div>
+        <div><label for="telegramUserId">Allowed Telegram user IDs</label><input id="telegramUserId" autocomplete="off" placeholder="123456789, 987654321"></div>
+        <div><label><input id="telegramEnabled" type="checkbox" onchange="telegramDirty=true"> Enable Telegram bot</label></div>
+      </div>
+      <p class="sub">Create a bot with @BotFather. Enter numeric admin user IDs separated by commas (not usernames). Send /start for account details and remaining usage. Each account has inline Name / email, Ping and Switch buttons; API accounts are listed together.</p>
+      <div class="actions"><button onclick="saveTelegram(this)" class="primary">Save Telegram settings</button><button onclick="clearTelegram(this)">Remove saved token</button></div>
+      <div id="telegramState" class="sub" role="status" aria-live="polite">Loading…</div>
+    </div>
+    <div class="restart-command-editor">
       <h2>Restart commands</h2>
       <p class="sub">One command per line. Used by manual restarts and automatic restarts after switching.</p>
       <div class="form-grid">

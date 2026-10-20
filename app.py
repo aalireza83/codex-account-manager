@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 Codex Account Manager
-- Python standard library only
+- Native account management uses the Python standard library
+- Optional Telegram control uses aiogram
 - No proxying of Codex traffic
 - Native account storage, OAuth login, switching, and usage
 - Optional Auto Ping uses the same native cache
@@ -29,6 +30,7 @@ from contextlib import contextmanager
 from locking import FileRLock
 from activity import ActivityStore
 from web_runtime import WebRuntime
+from telegram_bot import TelegramBot
 import time
 import webbrowser
 
@@ -141,6 +143,104 @@ def write_webui_config(data: dict) -> None:
             private_write(path,json_bytes(data))
         except OSError as e:
             raise RuntimeError(f"Could not write WebUI config: {e}") from e
+
+
+def telegram_settings() -> dict:
+    value=read_webui_config().get("telegram",{})
+    return value if isinstance(value,dict) else {}
+
+
+def telegram_status() -> dict:
+    config=telegram_settings()
+    return {"enabled":config.get("enabled") is True,"token_configured":bool(config.get("token")),
+            "allowed_user_id":config.get("allowed_user_id",""),"state":TELEGRAM_BOT.state}
+
+
+def set_telegram_settings(data: dict) -> dict:
+    enabled=data.get("enabled")
+    if not isinstance(enabled,bool):raise RuntimeError("enabled must be a boolean")
+    try:user_id=",".join(TelegramBot.user_ids(data.get("allowed_user_id","")))
+    except ValueError as error:raise RuntimeError(str(error)) from None
+    with WEBUI_CONFIG_LOCK:
+        config=read_webui_config()
+        previous=config.get("telegram",{})
+        token=data.get("token",previous.get("token","") if isinstance(previous,dict) else "")
+        if not isinstance(token,str):raise RuntimeError("Token must be text")
+        token=token.strip()
+        if token and not re.fullmatch(r"[0-9]+:[A-Za-z0-9_-]{20,200}",token):
+            raise RuntimeError("Invalid Telegram bot token format")
+        if enabled and (not token or not user_id):raise RuntimeError("Token and at least one allowed user ID are required")
+        config["telegram"]={"enabled":enabled,"token":token,"allowed_user_id":user_id}
+        write_webui_config(config)
+    return {"message":"Telegram settings saved.","telegram":telegram_status()}
+
+
+def telegram_command(text: str) -> str:
+    command,_,query=text.strip().partition(" ")
+    command=command.split("@",1)[0].lower();query=query.strip()
+    if command in ("/start","/help"):
+        return ("/accounts — list native accounts\n/status — active accounts and profiles\n"
+                "/switch <account> — switch by number, alias or email\n"
+                "/ping <account> — ping a native account\n/profiles — list API profiles\n"
+                "/profile <id> — activate an API profile\n/auto_ping <on|off> — toggle Auto Ping")
+    if command in ("/accounts","/status"):
+        rows=list_accounts(False)["accounts"]
+        lines=[("* " if a.get("active") else "")+str(a.get("number",""))+". "+
+               str(a.get("alias") or a.get("email") or a.get("account_name") or account_selector(a)) for a in rows]
+        if command=="/status":lines.append("Active profile: "+str(read_webui_config().get("active_profile","default")))
+        return "\n".join(lines) or "No accounts saved."
+    if command=="/profiles":
+        return "\n".join(str(p["id"])+": "+str(p["name"]) for p in list_profiles()) or "No profiles saved."
+    if command=="/switch" and query:return do_switch(query)["message"]
+    if command=="/ping" and query:return run_account_ping(query)
+    if command=="/profile" and query:return apply_account_profile(query)["message"]
+    if command=="/auto_ping" and query in ("on","off"):return set_auto_ping(query=="on")
+    return "Unknown command or missing argument. Send /help."
+
+
+def telegram_worker_loop():
+    AUTO_PING_CONTEXT.stop=AUTO_PING_STOP
+    try:TELEGRAM_BOT.run(AUTO_PING_STOP)
+    finally:del AUTO_PING_CONTEXT.stop
+
+
+TELEGRAM_API_USAGE={}
+
+
+def telegram_choices(refresh: bool = False) -> list[dict]:
+    active_profile=read_webui_config().get("active_profile","default")
+    AUTO_PING_CONTEXT.stop=AUTO_PING_STOP
+    try:accounts=list_accounts(refresh)["accounts"]
+    finally:del AUTO_PING_CONTEXT.stop
+    rows=[{"id":account_selector(a),"label":str(a.get("alias") or a.get("email") or a.get("account_name") or account_selector(a)),
+           "kind":"account","email":a.get("email"),"plan":a.get("plan"),"usage":a.get("usage"),
+           "active":bool(a.get("active")) and active_profile=="default"} for a in accounts]
+    for profile in list_profiles():
+        if profile.get("kind")!="api":continue
+        key=(str(webui_config_path()),profile["id"])
+        if refresh and profile.get("usage_url") and not AUTO_PING_STOP.is_set():
+            try:
+                report=fetch_api_profile_usage(profile["id"])
+                quota=report.get("quota",{})
+                if not isinstance(quota,dict):quota={}
+                TELEGRAM_API_USAGE[key]={"remaining":TelegramBot.number(quota.get("remaining",report.get("remaining"))),
+                                         "updated_at":time.time()}
+            except Exception:
+                TELEGRAM_API_USAGE[key]={**TELEGRAM_API_USAGE.get(key,{}),"failed":True}
+        rows.append({"id":profile["id"],"label":profile["name"],"kind":"api","model":profile.get("model"),
+                     "active":active_profile==profile["id"],"usage":TELEGRAM_API_USAGE.get(key,{})})
+    while len(TELEGRAM_API_USAGE)>256:TELEGRAM_API_USAGE.pop(next(iter(TELEGRAM_API_USAGE)))
+    return rows
+
+
+def telegram_execute(text: str) -> str:
+    # aiogram runs synchronous account operations in a background thread.
+    AUTO_PING_CONTEXT.stop=AUTO_PING_STOP
+    try:return telegram_command(text)
+    finally:del AUTO_PING_CONTEXT.stop
+
+
+TELEGRAM_BOT=TelegramBot(telegram_settings,telegram_execute,telegram_choices)
 
 
 def default_restart_commands() -> dict:
@@ -1467,6 +1567,8 @@ class Handler(BaseHTTPRequestHandler):
             data=self.read_json()
             if p.path=="/api/config":
                 self.send_json({"ok":True,"message":set_setting(data.get("name"),data.get("value"))});return
+            if p.path=="/api/config/telegram":
+                self.send_json({"ok":True,**set_telegram_settings(data)});return
             if p.path=="/api/config/restart-commands":
                 if "commands" not in data:raise RuntimeError("commands is required; use null to restore defaults")
                 self.send_json({"ok":True,**set_restart_commands(data["commands"])});return
@@ -1544,7 +1646,7 @@ def set_webui_enabled(enabled: bool) -> str:
 
 def settings_status() -> dict:
     return {"webui_enabled":webui_enabled(),"restart_after_switch":restart_after_switch_enabled(),
-            "restart_commands":configured_restart_commands(),
+            "restart_commands":configured_restart_commands(),"telegram":telegram_status(),
             "restart_command_defaults":default_restart_commands(),
             "auto_ping_enabled":auto_ping_enabled(),"auto_ping":auto_ping_snapshot()}
 
@@ -1661,6 +1763,8 @@ def run_web(args):
         AUTO_PING_STOP.clear()
         worker=threading.Thread(target=auto_ping_worker_loop,name="auto-ping-worker",daemon=True)
         worker.start()
+        telegram_worker=threading.Thread(target=telegram_worker_loop,name="telegram-bot",daemon=True)
+        telegram_worker.start()
         print(f"Codex Account Manager: http://{args.host}:{srv.server_port}",flush=True)
         try:
             while webui_enabled():srv.handle_request()
@@ -1668,6 +1772,7 @@ def run_web(args):
         finally:
             AUTO_PING_STOP.set();AUTO_PING_WAKE.set();LOGIN_MANAGER.close();srv.server_close()
             worker.join()
+            telegram_worker.join()
 
 
 def allowed_host(value: str) -> str:

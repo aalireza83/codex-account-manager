@@ -583,6 +583,27 @@ async function loadAccounts(refresh){
   finally{grid.style.opacity=1}
 }
 
+let telegramDirty=false;
+function fillTelegram(config){
+  if(!telegramDirty){
+    document.getElementById('telegramUserId').value=config.allowed_user_id||'';
+    document.getElementById('telegramEnabled').checked=config.enabled===true;
+  }
+  document.getElementById('telegramState').textContent=(config.token_configured?'Token saved. ':'No token saved. ')+config.state;
+}
+async function saveTelegram(button,remove=false){
+  button.disabled=true;
+  try{
+    const token=document.getElementById('telegramToken').value.trim();
+    const data={enabled:remove?false:document.getElementById('telegramEnabled').checked,allowed_user_id:document.getElementById('telegramUserId').value.trim()};
+    if(remove||token)data.token=remove?'':token;
+    const result=await post('/api/config/telegram',data);
+    telegramDirty=false;document.getElementById('telegramToken').value='';fillTelegram(result.telegram);
+    show(result.message,true);
+  }catch(error){show(error.message,false)}finally{button.disabled=false}
+}
+async function clearTelegram(button){await saveTelegram(button,true)}
+
 let restartCommandsDirty=false;
 let restartCommandDefaults=null;
 function fillRestartCommands(commands){
@@ -623,6 +644,7 @@ async function loadStatus(){
     if(!configResponse.ok||!config.ok)throw new Error(config.error||'Could not load Auto Ping status');
     document.getElementById('autoPingReport').textContent=JSON.stringify(config.auto_ping,null,2);
     restartCommandDefaults=config.restart_command_defaults;
+    fillTelegram(config.telegram);
     if(!restartCommandsDirty)fillRestartCommands(config.restart_commands);
     for(const id of ['restartAppCommands','saveRestartCommands','defaultRestartCommands'])document.getElementById(id).disabled=false;
   }catch(e){show(e.message,false)}
