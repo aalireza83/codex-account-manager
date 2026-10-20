@@ -136,7 +136,7 @@ class TelegramBot:
             sections = [(item, self.describe(item, index + 1)) for index, item in enumerate(items)]
         except Exception:
             sections = []
-            notice = 'Could not load accounts. Try Refresh usage.'
+            notice = 'Could not load accounts. Try Refresh.'
         # Keep all accounts together until Telegram's text/button limits require pages.
         pages = [[]]
         size = 0
@@ -168,7 +168,8 @@ class TelegramBot:
             navigation.append(InlineKeyboardButton(text='Next', callback_data=f'view:{page + 1}'))
         if navigation:
             rows.append(navigation)
-        rows.append([InlineKeyboardButton(text='Refresh usage', callback_data=f'refresh:{page}')])
+        rows.append([InlineKeyboardButton(text='Refresh', callback_data=f'refresh:{page}'),
+                     self.button('Restart', '/restart', {'label': 'Codex'}, settings, page, chat_id)])
         text = 'Accounts' + (f' · {page + 1}/{len(pages)}' if len(pages) > 1 else '')
         if notice:
             text += '\n' + notice
@@ -222,7 +223,8 @@ class TelegramBot:
             return
         try:
             await asyncio.to_thread(self.command, command)
-            notice = ('Ping completed: ' if command.startswith('/ping ') else 'Account selected: ') + label
+            notice = ('Codex restarted.' if command == '/restart' else
+                      ('Ping completed: ' if command.startswith('/ping ') else 'Account selected: ') + label)
         except Exception:
             notice = 'Operation failed. Check the account and server configuration in WebUI.'
         await self.show_overview(bot, message.chat.id, settings, page, message.message_id, notice=notice)

@@ -89,7 +89,7 @@
         <div><label for="telegramUserId">Allowed Telegram user IDs</label><input id="telegramUserId" autocomplete="off" placeholder="123456789, 987654321"></div>
         <div><label><input id="telegramEnabled" type="checkbox" onchange="telegramDirty=true"> Enable Telegram bot</label></div>
       </div>
-      <p class="sub">Create a bot with @BotFather. Enter numeric admin user IDs separated by commas (not usernames). Send /start for account details and remaining usage. Each account has inline Name / email, Ping and Switch buttons; API accounts are listed together.</p>
+      <p class="sub">Create a bot with @BotFather. Enter numeric admin user IDs separated by commas (not usernames). Send /start for account details and remaining usage. Each account has inline Name / email, Ping and Switch buttons; API accounts are listed together. Refresh updates usage; Restart restarts the Codex app server.</p>
       <div class="actions"><button onclick="saveTelegram(this)" class="primary">Save Telegram settings</button><button onclick="clearTelegram(this)">Remove saved token</button></div>
       <div id="telegramState" class="sub" role="status" aria-live="polite">Loading…</div>
     </div>

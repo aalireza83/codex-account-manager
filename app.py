@@ -191,6 +191,7 @@ def telegram_command(text: str) -> str:
         return "\n".join(lines) or "No accounts saved."
     if command=="/profiles":
         return "\n".join(str(p["id"])+": "+str(p["name"]) for p in list_profiles()) or "No profiles saved."
+    if command=="/restart" and not query:return restart_services((CODEX_APP_SERVICE,))["message"]
     if command=="/switch" and query:return do_switch(query)["message"]
     if command=="/ping" and query:return run_account_ping(query)
     if command=="/profile" and query:return apply_account_profile(query)["message"]

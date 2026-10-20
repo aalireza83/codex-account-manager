@@ -254,8 +254,10 @@ age. Every account has one inline row with three columns: **Name / email**,
 with Switch; their Ping button is unavailable. There are no profile/settings
 submenus or extra commands to type.
 
-The initial overview uses cached usage, like the WebUI. **Refresh usage** updates
-native limits and supported API-provider quotas. Missing or failed usage is
+The initial overview uses cached usage, like the WebUI. **Refresh** updates
+native limits and supported API-provider quotas. **Restart** runs the same configured
+Codex app-server restart commands as the WebUI, then updates the overview.
+Missing or failed usage is
 marked explicitly; credentials and raw provider errors are never displayed.
 After Ping or Switch, the same overview message updates with the result and
 active state. Lists stay together until Telegram's message or button limits

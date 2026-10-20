@@ -57,6 +57,11 @@ class TelegramTests(IsolatedManager):
         self.assertIn('missing argument', app.telegram_command('/switch'))
 
 
+    def test_telegram_restart_uses_the_same_configured_codex_restart_as_webui(self):
+        with patch('app.restart_services',return_value={'message':'Restarted Codex','output':'private command output'}) as restart:
+            self.assertEqual(app.telegram_command('/restart'),'Restarted Codex')
+        restart.assert_called_once_with((app.CODEX_APP_SERVICE,))
+
     def test_overview_uses_native_usage_and_reports_the_effective_active_account(self):
         self.store.import_documents(auth(), 'Work')
         with self.store.switching('Work'):pass
@@ -213,6 +218,23 @@ class AiogramTests(unittest.IsolatedAsyncioTestCase):
         markup=await self.overview()
         await self.bot.on_callback(self.callback(markup.inline_keyboard[-1][0].callback_data),self.client,self.settings,self.stop)
         self.snapshot.assert_called_with(True)
+        self.command.assert_not_called()
+
+    async def test_footer_restart_runs_once_and_keeps_the_account_overview(self):
+        markup=await self.overview()
+        self.assertEqual([button.text for button in markup.inline_keyboard[-1]],['Refresh','Restart'])
+        button=markup.inline_keyboard[-1][1]
+        await self.bot.on_callback(self.callback(button.callback_data),self.client,self.settings,self.stop)
+        self.command.assert_called_once_with('/restart')
+        self.assertIn('Codex restarted.',self.client.edit_message_text.call_args.args[0])
+        self.assertIn('77% remaining',self.client.edit_message_text.call_args.args[0])
+        await self.bot.on_callback(self.callback(button.callback_data),self.client,self.settings,self.stop)
+        self.command.assert_called_once()
+
+    async def test_restart_rejects_an_unlisted_user(self):
+        markup=await self.overview()
+        await self.bot.on_callback(self.callback(markup.inline_keyboard[-1][1].callback_data,user_id=7),
+                                   self.client,self.settings,self.stop)
         self.command.assert_not_called()
 
     async def test_empty_unknown_usage_and_failed_refresh_remain_usable(self):
