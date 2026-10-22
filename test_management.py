@@ -136,6 +136,9 @@ class ManagementTests(IsolatedManager):
         original=(self.home/"auth.json").read_bytes()
         def ping(args,**kwargs):
             path=Path(kwargs["env"]["CODEX_HOME"])/"auth.json"
+            self.assertEqual(path.parent.parent,app.storage_root()/"ping")
+            self.assertEqual(path.parent.stat().st_mode & 0o777,0o700)
+            self.assertEqual(path.stat().st_mode & 0o777,0o600)
             updated=json.loads(path.read_text());updated["tokens"]["refresh_token"]="rotated-by-ping"
             updated["last_refresh"]="2026-10-18T00:00:00Z";path.write_text(json.dumps(updated))
             return subprocess.CompletedProcess(args,self.ping_code,"OK" if not self.ping_code else "","failure")
@@ -147,6 +150,17 @@ class ManagementTests(IsolatedManager):
                 else:app.run_account_ping("2")
             self.assertEqual((self.home/"auth.json").read_bytes(),original)
             self.assertEqual(json.loads(self.store.snapshot("other::account-1").read_text())["tokens"]["refresh_token"],"rotated-by-ping")
+            self.assertEqual(list((app.storage_root()/"ping").iterdir()),[])
+
+    def test_ping_reports_expired_auth_without_repeating_cli_logs(self):
+        self.store.import_documents(auth())
+        original=self.store.snapshot("user-1::account-1").read_bytes()
+        for code in ("refresh_token_reused","refresh_token_revoked","refresh_token_expired","token_expired"):
+            with self.subTest(code=code),patch("app.shutil.which",return_value="/usr/bin/codex"),patch("app.execute_ping",return_value=subprocess.CompletedProcess([],1,"",f"noisy log: {code}\n"*20)):
+                with self.assertRaisesRegex(RuntimeError,"Sign in again") as error:app.run_account_ping("1")
+                self.assertNotIn("noisy log",str(error.exception))
+                self.assertEqual(self.store.snapshot("user-1::account-1").read_bytes(),original)
+                self.assertEqual(list((app.storage_root()/"ping").iterdir()),[])
 
     def test_relogin_in_same_timestamp_second_wins_over_older_active_file(self):
         old=auth();old["last_refresh"]="2026-10-18T00:00:00Z"

@@ -1353,7 +1353,9 @@ def _run_account_ping(query: str) -> str:
         "--sandbox","read-only","Reply only with OK",
     ]
     with account_store().ping_credentials(query) as (document,label,save):
-        with tempfile.TemporaryDirectory(prefix="codex-account-manager-ping-") as temp_dir:
+        ping_root=storage_root()/"ping"
+        ensure_private_dir(ping_root)
+        with tempfile.TemporaryDirectory(prefix="session-",dir=ping_root) as temp_dir:
             temp_home=Path(temp_dir)
             auth_file=temp_home/"auth.json"
             private_write(auth_file,json_bytes(document))
@@ -1367,6 +1369,8 @@ def _run_account_ping(query: str) -> str:
                 if updated is not None and updated!=document:save(updated)
     if cp.returncode!=0:
         error=cp.stderr.strip() or cp.stdout.strip() or "Codex account ping failed"
+        if any(code in error for code in ("refresh_token_reused","refresh_token_revoked","refresh_token_expired","token_expired")):
+            raise RuntimeError("Ping authentication expired or was revoked. Sign in again to this account from Add account / Login, then retry Ping. Existing account data is preserved.")
         raise RuntimeError(error)
     output=cp.stdout.strip()
     if output!="OK":
