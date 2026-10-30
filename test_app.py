@@ -120,7 +120,7 @@ class ParsingTests(unittest.TestCase):
                 request=opener.open.call_args.args[0]
                 self.assertEqual(request.full_url,app.DEFAULT_USAGE_URL)
                 self.assertEqual(request.get_header("Authorization"),"Bearer sk-test")
-                self.assertEqual(request.get_header("User-agent"),f"CodexAuthWebUI/{app.APP_VERSION}")
+                self.assertEqual(request.get_header("User-agent"),f"CodexAccountManager/{app.APP_VERSION}")
                 self.assertEqual(result["quota"]["remaining"],42)
                 self.assertNotIn("sk-test",str(result))
 

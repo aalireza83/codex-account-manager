@@ -60,7 +60,9 @@ python3 app.py login --manual --alias work
 ```
 
 Browser OAuth uses a separate local callback listener on port 1455. Adding an
-account does not switch the active account.
+account does not switch the active account. Logging in again or importing
+credentials for the already active account also updates its Codex `auth.json`,
+so existing CLI integrations can use the renewed session without another switch.
 
 ## CLI
 
@@ -293,6 +295,12 @@ model catalog are integration points. Using another manager against the same
 Codex installation can change that active selection, but its account registry
 is never merged into this vault. An unfamiliar active account is not enrolled
 automatically: add it through login or import.
+
+For an enrolled active account, synchronization captures credentials renewed by
+Codex and restores a newer vault copy to `auth.json` when the active file is
+stale. It preserves an account or credentials changed by another client during
+the operation. Credential renewal does not automatically restart running clients;
+a client that caches authentication may need to reconnect or restart.
 
 Credential files use mode `0600`, with private directories using `0700`.
 Process locks coordinate the manager's own CLI and WebUI writes.

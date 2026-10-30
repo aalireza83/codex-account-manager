@@ -1,7 +1,7 @@
 """Private account vault for Codex Account Manager.
 
 The vault is independent of CODEX_HOME and other account managers. Only the
-active Codex auth.json is synchronized when listing/switching accounts.
+active Codex auth.json is synchronized when importing/listing/switching accounts.
 Network calls never follow redirects carrying credentials.
 """
 from __future__ import annotations
@@ -280,20 +280,47 @@ class AccountStore:
             raise RuntimeError("Alias can only be applied to a single imported account")
         with self.locked():
             registry = self.read()
+            active_path = self.home / "auth.json"
+            try:
+                active_before = active_path.read_bytes()
+            except FileNotFoundError:
+                active_before = None
             files = {}
             records = []
             for document in documents:
                 record = self._upsert(registry, document, alias or None)
                 files[self.snapshot(record["account_key"])] = json_bytes(document)
                 records.append(record["account_key"])
+            # Reauthorizing the selected identity renews its active credentials;
+            # importing another account must never select it implicitly.
+            for key in records:
+                record = self.resolve(registry, key)
+                document = json.loads(files[self.snapshot(key)])
+                if self._stage_active_auth(files, record, document, active_before):
+                    registry["active_account_key"] = key
             files[self.registry_path] = json_bytes(registry)
             self._commit(files)
         return records
 
-    def _sync_active(self, registry):
-        """Capture tokens refreshed by Codex before switching away from an account."""
+    def _stage_active_auth(self, files, record, document, active_before):
+        """Update only the same selected identity, unless another client changed it."""
+        active_path = self.home / "auth.json"
         try:
-            document = json.loads((self.home / "auth.json").read_text())
+            current = active_path.read_bytes()
+            if current != active_before or not matches_identity(record, identity(json.loads(current))):
+                return False
+        except (OSError, ValueError, RuntimeError):
+            return False
+        files[active_path] = json_bytes(document)
+        record["last_seen_active_auth"] = credential_fingerprint(document)
+        return True
+
+    def _sync_active(self, registry):
+        """Reconcile credentials in both directions without changing the selected identity."""
+        active_path = self.home / "auth.json"
+        try:
+            active_before = active_path.read_bytes()
+            document = json.loads(active_before)
             metadata=identity(document)
         except FileNotFoundError:
             registry["active_account_key"] = None
@@ -314,11 +341,13 @@ class AccountStore:
         fingerprint = credential_fingerprint(document)
         last_seen = record.get("last_seen_active_auth")
         should_save = True
+        restore = None
         if snapshot.exists():
             try:
                 saved = json.loads(snapshot.read_text())
                 if matches_identity(record, identity(saved)):
-                    if credential_fingerprint(saved) == fingerprint or last_seen == fingerprint:
+                    saved_fingerprint = credential_fingerprint(saved)
+                    if saved_fingerprint == fingerprint or last_seen == fingerprint:
                         should_save = False
                     else:
                         active_time = auth_timestamp(document, self.home / "auth.json")
@@ -327,8 +356,16 @@ class AccountStore:
                         # generations without mistaking an unchanged active file
                         # for the credentials just imported by a new login.
                         should_save = active_time > saved_time or (last_seen is not None and active_time[0] >= saved_time[0])
+                    if (not should_save and saved_fingerprint != fingerprint
+                            and auth_timestamp(saved, snapshot) >= auth_timestamp(document, active_path)):
+                        restore = saved
             except (OSError, ValueError, RuntimeError):
                 pass
+        if restore is not None:
+            files = {}
+            if self._stage_active_auth(files, record, restore, active_before):
+                self._commit(files)
+                fingerprint = credential_fingerprint(restore)
         if should_save:
             private_write(snapshot, json_bytes(document))
         record["last_seen_active_auth"] = fingerprint

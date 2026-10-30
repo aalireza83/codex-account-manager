@@ -42,7 +42,10 @@ class StoreTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.home = Path(self.temp.name)
-        environment=patch.dict(os.environ,{"CODEX_ACCOUNT_MANAGER_CONFIG":str(self.home/"manager"/"config.json")})
+        environment=patch.dict(os.environ,{
+            "CODEX_ACCOUNT_MANAGER_CONFIG":str(self.home/"manager"/"config.json"),
+            "CODEX_ACCOUNT_MANAGER_DATA_DIR":str(self.home/"manager"/"data"),
+        })
         environment.start();self.addCleanup(environment.stop)
         self.store = accounts.AccountStore(self.home, directory=Path(self.home)/"manager"/"data"/"vault")
 
@@ -107,6 +110,153 @@ class StoreTests(unittest.TestCase):
         saved = json.loads(self.store.snapshot("user-1::account-1").read_text())
         self.assertEqual(saved["tokens"]["access_token"], "fresh-from-codex")
         self.assertEqual(self.store.read()["previous_active_account_key"], "user-1::account-1")
+
+    def test_reimport_active_account_updates_cli_without_switching_again(self):
+        old = auth()
+        old["last_refresh"] = "2026-10-22T14:14:42Z"
+        self.store.import_documents([old, auth("other")])
+        with self.store.switching("1"):
+            pass
+        renewed = copy.deepcopy(old)
+        renewed["last_refresh"] = "2026-10-30T08:46:44Z"
+        renewed["tokens"]["refresh_token"] = "renewed-session"
+        self.store.import_documents(renewed)
+        self.assertEqual(json.loads((self.home / "auth.json").read_text()), renewed)
+        self.assertEqual(self.store.read()["active_account_key"], "user-1::account-1")
+        self.assertIsNone(self.store.read().get("previous_active_account_key"))
+
+    def test_listing_repairs_newer_vault_credentials_for_same_active_account(self):
+        old = auth()
+        old["last_refresh"] = "2026-10-22T14:14:42Z"
+        self.store.import_documents(old)
+        with self.store.switching("1"):
+            pass
+        renewed = copy.deepcopy(old)
+        renewed["last_refresh"] = "2026-10-30T08:46:44Z"
+        renewed["tokens"]["refresh_token"] = "vault-only-renewal"
+        # Reproduce a vault written by a previous manager version.
+        accounts.private_write(self.store.snapshot("user-1::account-1"), accounts.json_bytes(renewed))
+        view = self.store.list()["accounts"][0]
+        self.assertTrue(view["active"])
+        self.assertEqual(json.loads((self.home / "auth.json").read_text()), renewed)
+        self.assertEqual(self.store.read()["accounts"][0]["last_seen_active_auth"],
+                         accounts.credential_fingerprint(renewed))
+
+    def test_legacy_vault_repair_uses_token_generation_not_recent_active_file_time(self):
+        old = auth()
+        old["last_refresh"] = "2026-10-22T14:14:42Z"
+        self.store.import_documents(old)
+        with self.store.switching("1"):
+            pass
+        renewed = copy.deepcopy(old)
+        renewed["last_refresh"] = "2026-10-30T08:46:44Z"
+        renewed["tokens"]["refresh_token"] = "vault-only-renewal"
+        snapshot = self.store.snapshot("user-1::account-1")
+        accounts.private_write(snapshot, accounts.json_bytes(renewed))
+        registry = self.store.read()
+        registry["accounts"][0].pop("last_seen_active_auth")
+        accounts.private_write(self.store.registry_path, accounts.json_bytes(registry))
+        (self.home / "auth.json").touch()
+        self.store.list()
+        self.assertEqual(json.loads((self.home / "auth.json").read_text()), renewed)
+
+    def test_reimport_other_workspace_does_not_replace_active_credentials(self):
+        active = auth()
+        self.store.import_documents(active)
+        with self.store.switching("1"):
+            pass
+        before = (self.home / "auth.json").read_bytes()
+        self.store.import_documents(auth(account="other-workspace"))
+        self.assertEqual((self.home / "auth.json").read_bytes(), before)
+
+    def test_vault_repair_preserves_external_token_rotation_during_sync(self):
+        old = auth()
+        old["last_refresh"] = "2026-10-22T14:14:42Z"
+        self.store.import_documents(old)
+        with self.store.switching("1"):
+            pass
+        renewed = copy.deepcopy(old)
+        renewed["last_refresh"] = "2026-10-30T08:46:44Z"
+        renewed["tokens"]["refresh_token"] = "vault-renewal"
+        accounts.private_write(self.store.snapshot("user-1::account-1"), accounts.json_bytes(renewed))
+        external = copy.deepcopy(renewed)
+        external["last_refresh"] = "2026-10-31T00:00:00Z"
+        external["tokens"]["refresh_token"] = "external-renewal"
+        original_timestamp = accounts.auth_timestamp
+        def concurrent_timestamp(document, path):
+            accounts.private_write(self.home / "auth.json", accounts.json_bytes(external))
+            return original_timestamp(document, path)
+        with patch("accounts.auth_timestamp", side_effect=concurrent_timestamp):
+            self.store.list()
+        self.assertEqual(json.loads((self.home / "auth.json").read_text()), external)
+        self.store.list()
+        self.assertEqual(json.loads(self.store.snapshot("user-1::account-1").read_text()), external)
+
+    def test_vault_repair_write_failure_is_reported_without_losing_credentials(self):
+        old = auth()
+        old["last_refresh"] = "2026-10-22T14:14:42Z"
+        self.store.import_documents(old)
+        with self.store.switching("1"):
+            pass
+        renewed = copy.deepcopy(old)
+        renewed["last_refresh"] = "2026-10-30T08:46:44Z"
+        renewed["tokens"]["refresh_token"] = "vault-renewal"
+        snapshot = self.store.snapshot("user-1::account-1")
+        accounts.private_write(snapshot, accounts.json_bytes(renewed))
+        original_write = accounts.private_write
+        failed = False
+        def fail_active_once(path, data):
+            nonlocal failed
+            if path == self.home / "auth.json" and not failed:
+                failed = True
+                raise OSError("synthetic write failure")
+            original_write(path, data)
+        with patch("accounts.private_write", side_effect=fail_active_once), self.assertRaises(OSError):
+            self.store.list()
+        self.assertEqual(json.loads((self.home / "auth.json").read_text()), old)
+        self.assertEqual(json.loads(snapshot.read_text()), renewed)
+
+    def test_reimport_preserves_credentials_changed_by_external_client(self):
+        self.store.import_documents(auth())
+        with self.store.switching("1"):
+            pass
+        original_upsert = self.store._upsert
+        external = auth("external")
+        def concurrent_upsert(*args, **kwargs):
+            result = original_upsert(*args, **kwargs)
+            accounts.private_write(self.home / "auth.json", accounts.json_bytes(external))
+            return result
+        with patch.object(self.store, "_upsert", side_effect=concurrent_upsert):
+            self.store.import_documents(auth(access="renewed"))
+        self.assertEqual(json.loads((self.home / "auth.json").read_text()), external)
+
+    def test_reimport_failure_rolls_back_vault_registry_and_active_credentials(self):
+        self.store.import_documents(auth())
+        with self.store.switching("1"):
+            pass
+        paths = [self.home / "auth.json", self.store.registry_path, self.store.snapshot("user-1::account-1")]
+        before = {p: p.read_bytes() for p in paths}
+        original_write = accounts.private_write
+        failed = False
+        def fail_registry_once(path, data):
+            nonlocal failed
+            if path == self.store.registry_path and not failed:
+                failed = True
+                raise OSError("synthetic write failure")
+            original_write(path, data)
+        with patch("accounts.private_write", side_effect=fail_registry_once), self.assertRaises(OSError):
+            self.store.import_documents(auth(access="renewed"))
+        self.assertEqual({p: p.read_bytes() for p in paths}, before)
+
+    def test_invalid_batch_does_not_partially_renew_active_account(self):
+        self.store.import_documents(auth())
+        with self.store.switching("1"):
+            pass
+        paths = [self.home / "auth.json", self.store.registry_path, self.store.snapshot("user-1::account-1")]
+        before = {p: p.read_bytes() for p in paths}
+        with self.assertRaises(RuntimeError):
+            self.store.import_documents([auth(access="renewed"), {"tokens": {}}])
+        self.assertEqual({p: p.read_bytes() for p in paths}, before)
 
     def test_switch_rollback_restores_auth_registry_and_config(self):
         self.store.import_documents([auth(), auth("user-2")])
@@ -311,6 +461,23 @@ class LoginTests(unittest.TestCase):
         self.assertNotIn("verifier", self.manager.sessions[session["id"]])
         self.assertNotIn("access_token", json.dumps(result))
         with self.assertRaises(RuntimeError):self.manager.complete(session["id"], self.callback(session))
+
+    @patch("login.request_json")
+    def test_relogin_renews_selected_account_without_another_switch(self, request):
+        self.store.import_documents(auth())
+        with self.store.switching("1"):
+            pass
+        session = self.manager.start("manual")
+        renewed = self.token_result()
+        renewed["access_token"] = "renewed-login-access"
+        renewed["refresh_token"] = "renewed-login-refresh"
+        request.return_value = renewed
+        result = self.manager.complete(session["id"], self.callback(session))
+        self.assertEqual(result["status"], "success")
+        active = json.loads((self.store.home / "auth.json").read_text())
+        self.assertEqual(active["tokens"]["access_token"], "renewed-login-access")
+        self.assertEqual(active["tokens"]["refresh_token"], "renewed-login-refresh")
+        self.assertEqual(active, json.loads(self.store.snapshot("user-1::account-1").read_text()))
 
     @patch("login.request_json")
     def test_wrong_state_or_origin_rejected_without_exchanging(self, request):

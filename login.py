@@ -163,7 +163,7 @@ class LoginManager:
                 if session["status"] != "exchanging":
                     return
                 session["store"].import_documents(document, session["alias"])
-                self._finish(session, "success", "Account saved. Select it from Accounts when you want to switch.")
+                self._finish(session, "success", "Account saved. Credentials renewed if already active; otherwise select it from Accounts to switch.")
         except (RuntimeError, OSError, ValueError):
             with self.lock:
                 if session["status"] == "exchanging":
