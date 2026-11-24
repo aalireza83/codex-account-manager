@@ -303,6 +303,7 @@ function render(data){
       <div class="account-details"><div class="plan">${esc(a.plan||'—')}</div>${a.usage?.reset_credits!=null?`<div class="metric account-resets"><span class="label">Available resets</span><span class="value">${esc(a.usage.reset_credits)}</span></div>`:''}</div>
       <div class="usage-stack">${metric('5-hour remaining',five)}${metric('Weekly remaining',weekly)}${usageRefreshStatus(a)}</div>
       <div class="account-actions">
+        <button ${a.usage?.reset_credits>0?'':'disabled'} onclick='resetAccountUsage(${jsArg(stableSelector)},this)'>Reset usage</button>
         <button class="test-button" onclick='pingAccount(${jsArg(selector)},this)'>Ping</button>
         <button class="alias-button" onclick='openAliasEditor(${jsArg(stableSelector)},${jsArg(selector)},${jsArg(a.alias||'')})'>${a.alias?'Edit alias':'Set alias'}</button>
         <button ${fullyActive?'disabled':''} onclick='useCodexAuth(${jsArg(selector)},${a.active?'true':'false'},this)'>${fullyActive?'Active':'Switch account'}</button>
@@ -923,3 +924,21 @@ try{
     if(saved.kind==='add-api'&&saved.id)openProfileEditor(saved.id);else openAccountDialog(saved.kind);
   }
 }catch(_){}
+
+async function resetAccountUsage(query, button) {
+  button.disabled=true;
+  try {
+    const request=async(path,body)=>{
+      const response=await fetch('/api/account-reset/'+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      const result=await response.json();
+      if(!response.ok || !result.ok) throw new Error(result.error || result.message || 'Reset request failed');
+      return result;
+    };
+    const prepared=await request('prepare',{query});
+    if(!window.confirm([prepared.message,...prepared.warnings.map(w=>'Warning: '+w)].join('\n\n'))) return;
+    const result=await request('confirm',{query:prepared.query,confirmation_token:prepared.confirmation_token});
+    window.alert(result.message);
+    await loadAccounts(false);
+  } catch(error) { window.alert(error.message); }
+  finally { button.disabled=false; }
+}

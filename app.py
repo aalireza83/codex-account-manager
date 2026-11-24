@@ -194,6 +194,10 @@ def telegram_command(text: str) -> str:
     if command=="/restart" and not query:return restart_services((CODEX_APP_SERVICE,))["message"]
     if command=="/switch" and query:return do_switch(query)["message"]
     if command=="/ping" and query:return run_account_ping(query)
+    if command=="/reset-prepare" and query:return json.dumps(account_store().prepare_usage_reset(query))
+    if command=="/reset-confirm" and query:
+        selector, token = query.rsplit(" ", 1)
+        return account_store().confirm_usage_reset(selector, token)["message"]
     if command=="/profile" and query:return apply_account_profile(query)["message"]
     if command=="/auto_ping" and query in ("on","off"):return set_auto_ping(query=="on")
     return "Unknown command or missing argument. Send /help."
@@ -1570,6 +1574,10 @@ class Handler(BaseHTTPRequestHandler):
         p=urlparse(self.path)
         try:
             data=self.read_json()
+            if p.path=="/api/account-reset/prepare":
+                self.send_json({"ok":True,**account_store().prepare_usage_reset(data.get("query", ""))});return
+            if p.path=="/api/account-reset/confirm":
+                self.send_json({"ok":True,**account_store().confirm_usage_reset(data.get("query", ""), data.get("confirmation_token"))});return
             if p.path=="/api/config":
                 self.send_json({"ok":True,"message":set_setting(data.get("name"),data.get("value"))});return
             if p.path=="/api/config/telegram":

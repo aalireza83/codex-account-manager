@@ -1,5 +1,6 @@
 """Private aiogram account overview with inline Ping and Switch controls."""
 import asyncio
+import json
 import math
 import re
 import secrets
@@ -159,6 +160,8 @@ class TelegramBot:
                          self.button('Ping' if ping else '—', ping, item, settings, page, chat_id),
                          self.button('✓ Active' if item.get('active') else 'Switch',
                                      None if item.get('active') else switch, item, settings, page, chat_id)])
+            if item['kind'] == 'account' and (self.number((item.get('usage') or {}).get('reset_credits')) or 0) > 0:
+                rows.append([self.button('Reset usage: ' + label, '/reset-prepare ' + item['id'], item, settings, page, chat_id)])
         while len(self.actions) > 2048:
             self.actions.pop(next(iter(self.actions)))
         navigation = []
@@ -222,11 +225,23 @@ class TelegramBot:
         if stop.is_set() or self.identity(self.settings()) != self.identity(settings):
             return
         try:
-            await asyncio.to_thread(self.command, command)
+            if command.startswith('/reset-prepare '):
+                from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+                prepared = json.loads(await asyncio.to_thread(self.command, command))
+                item = {'label': label}
+                confirm = self.button('Confirm: consume one reset', '/reset-confirm ' + prepared['query'] + ' ' + prepared['confirmation_token'], item, settings, page, message.chat.id)
+                text = prepared['message'] + ''.join('\n\nWarning: ' + warning for warning in prepared['warnings'])
+                await self.render(bot, message.chat.id, text, InlineKeyboardMarkup(inline_keyboard=[
+                    [confirm], [InlineKeyboardButton(text='Cancel', callback_data=f'view:{page}')]]), message.message_id)
+                return
+            result = await asyncio.to_thread(self.command, command)
             notice = ('Codex restarted.' if command == '/restart' else
                       ('Ping completed: ' if command.startswith('/ping ') else 'Account selected: ') + label)
-        except Exception:
-            notice = 'Operation failed. Check the account and server configuration in WebUI.'
+        except Exception as error:
+            notice = (str(error) if command.startswith('/reset-') and isinstance(error, RuntimeError) else
+                      'Operation failed. Check the account and server configuration in WebUI.')
+        if command.startswith('/reset-confirm ') and 'result' in locals():
+            notice = result
         await self.show_overview(bot, message.chat.id, settings, page, message.message_id, notice=notice)
 
     async def session(self, settings, stop):

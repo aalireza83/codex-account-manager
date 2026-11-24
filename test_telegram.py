@@ -114,6 +114,26 @@ class AiogramTests(unittest.IsolatedAsyncioTestCase):
         await self.bot.show_overview(self.client,42,self.settings)
         return self.client.send_message.call_args.kwargs['reply_markup']
 
+    async def test_reset_requires_second_click_and_displays_warnings(self):
+        import json
+        self.choices[0]['usage']['reset_credits'] = 1
+        self.command.side_effect = [json.dumps({'query':'stable-key','confirmation_token':'nonce',
+            'message':'Consume one reset?', 'warnings':['Weekly quota has 60% remaining.', 'Weekly reset is within 24 hours.']}), 'Usage reset completed.']
+        markup = await self.overview()
+        reset = next(b for row in markup.inline_keyboard for b in row if b.text.startswith('Reset usage'))
+        await self.bot.on_callback(self.callback(reset.callback_data),self.client,self.settings,self.stop)
+        self.command.assert_called_once_with('/reset-prepare stable-key')
+        text = self.client.edit_message_text.call_args.args[0]
+        self.assertIn('60%', text)
+        self.assertIn('24 hours', text)
+        confirmation = self.client.edit_message_text.call_args.kwargs['reply_markup']
+        confirm = confirmation.inline_keyboard[0][0]
+        await self.bot.on_callback(self.callback(confirm.callback_data),self.client,self.settings,self.stop)
+        self.assertEqual(self.command.call_count,2)
+        self.command.assert_called_with('/reset-confirm stable-key nonce')
+        await self.bot.on_callback(self.callback(confirm.callback_data),self.client,self.settings,self.stop)
+        self.assertEqual(self.command.call_count,2)
+
     async def test_start_shows_limits_and_three_columns_without_an_extra_menu(self):
         from aiogram.types import InlineKeyboardMarkup,ReplyKeyboardRemove
         self.client.send_message.return_value.message_id=99

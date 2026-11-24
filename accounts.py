@@ -12,6 +12,7 @@ import hashlib
 import json
 import math
 import os
+import secrets
 import tempfile
 import time
 from datetime import datetime
@@ -643,6 +644,70 @@ class AccountStore:
         if response.get("plan_type"):
             record["plan"] = response["plan_type"]
         return {"requested": True, "status": "ok"}
+
+    def prepare_usage_reset(self, query):
+        with self.locked():
+            registry = self.read()
+            record = self.resolve(registry, query)
+            if (record.get("reset_operation") or {}).get("state") == "sent":
+                raise RuntimeError("Previous reset outcome is unknown. Check the account before trying again.")
+            status = self._usage(record)
+            if status["status"] != "ok":
+                raise RuntimeError("Usage reset requires a ChatGPT account")
+            usage = quota_view(record.get("last_usage"))
+            if (usage.get("reset_credits") or 0) <= 0:
+                raise RuntimeError("No reset credits available")
+            warnings = []
+            weekly = next((v for v in usage.values() if isinstance(v, dict)
+                           and v.get("window_minutes") == 10080), None)
+            if weekly is None:
+                weekly = usage.get("secondary") or {}
+            remaining = weekly.get("remaining_percent")
+            resets_at = weekly.get("resets_at")
+            if remaining is None or resets_at is None:
+                warnings.append("Weekly usage or reset time is unavailable.")
+            if remaining is not None and remaining > 10:
+                warnings.append(f"Weekly quota still has {remaining:g}% remaining (more than 10%).")
+            if resets_at is not None and resets_at - time.time() < 86400:
+                warnings.append("The next weekly reset is less than 24 hours away (or already due).")
+            token = secrets.token_urlsafe(24)
+            record["reset_operation"] = {"token": token, "expires_at": time.time() + 120, "state": "prepared"}
+            private_write(self.registry_path, json_bytes(registry))
+            return {"query": record["account_key"], "confirmation_token": token,
+                    "message": "Reset usage for " + str(record.get("alias") or record.get("email") or record["account_key"])
+                    + "? This consumes one reset credit.", "warnings": warnings}
+
+    def confirm_usage_reset(self, query, token):
+        with self.locked():
+            registry = self.read()
+            record = self.resolve(registry, query)
+            operation = record.get("reset_operation") or {}
+            if (operation.get("state") != "prepared" or operation.get("expires_at", 0) < time.time()
+                    or not isinstance(token, str) or not secrets.compare_digest(operation.get("token", ""), token)):
+                raise RuntimeError("Reset confirmation expired or already used. Request confirmation again.")
+            document = self._auth(record)
+            operation["state"] = "sent"
+            private_write(self.registry_path, json_bytes(registry))
+            # Never retry a consume request automatically, including on 401 or network failure.
+            try:
+                response = request_json("https://chatgpt.com/backend-api/wham/rate-limit-reset-credits/consume",
+                             data={"redeem_request_id": token},
+                             headers={"Authorization": "Bearer " + document["tokens"]["access_token"],
+                                      "ChatGPT-Account-Id": record["chatgpt_account_id"]})
+            except Exception:
+                raise RuntimeError("Reset outcome is unknown. Check the account; automatic retry is blocked.") from None
+            if response.get("code") not in ("reset", "nothing_to_reset", "no_credit", "already_redeemed"):
+                raise RuntimeError("Reset outcome is unknown. Check the account; automatic retry is blocked.")
+            operation["state"] = "done"
+            private_write(self.registry_path, json_bytes(registry))
+            message = {"reset": "Usage reset completed.", "nothing_to_reset": "No usage needed resetting.",
+                       "no_credit": "No reset credit available.", "already_redeemed": "This reset was already redeemed."}[response["code"]]
+            try:
+                self._usage(record)
+                private_write(self.registry_path, json_bytes(registry))
+            except Exception:
+                message += " Usage refresh failed; refresh manually to see the new limits."
+            return {"message": message}
 
     def list(self, refresh=False, cancel_event=None):
         with self.locked():

@@ -49,6 +49,49 @@ class StoreTests(unittest.TestCase):
         environment.start();self.addCleanup(environment.stop)
         self.store = accounts.AccountStore(self.home, directory=Path(self.home)/"manager"/"data"/"vault")
 
+    def test_reset_requires_fresh_single_use_confirmation(self):
+        key = self.store.import_documents([auth()])[0]
+        payload = quota()
+        payload["rate_limit"]["secondary_window"]["reset_at"] = time.time() + 3600
+        with patch("accounts.request_json", return_value=payload) as remote:
+            with self.assertRaises(RuntimeError):
+                self.store.confirm_usage_reset(key, "unconfirmed")
+            remote.assert_not_called()
+            prepared = self.store.prepare_usage_reset(key)
+            self.assertEqual(len(prepared["warnings"]), 2)
+            self.assertEqual(remote.call_count, 1)  # Preparation only reads usage.
+        with patch("accounts.request_json", side_effect=[{"code": "reset"}, quota()]) as remote:
+            result = self.store.confirm_usage_reset(key, prepared["confirmation_token"])
+            self.assertIn("completed", result["message"])
+            self.assertEqual(remote.call_count, 2)
+            with self.assertRaises(RuntimeError):
+                self.store.confirm_usage_reset(key, prepared["confirmation_token"])
+            self.assertEqual(remote.call_count, 2)
+
+    def test_reset_warning_boundaries_and_expiry(self):
+        key = self.store.import_documents([auth()])[0]
+        payload = quota()
+        self.store.import_documents([auth(access=jwt({"exp": 2100000000}))])
+        payload["rate_limit"]["secondary_window"].update(used_percent=90, reset_at=2000000000 + 86400)
+        with patch("accounts.time.time", return_value=2000000000), patch("accounts.request_json", return_value=payload):
+            prepared = self.store.prepare_usage_reset(key)
+            self.assertEqual(prepared["warnings"], [])
+        with patch("accounts.time.time", return_value=2000000121), patch("accounts.request_json") as remote:
+            with self.assertRaises(RuntimeError):
+                self.store.confirm_usage_reset(key, prepared["confirmation_token"])
+            remote.assert_not_called()
+
+    def test_reset_network_failure_blocks_another_consume(self):
+        key = self.store.import_documents([auth()])[0]
+        with patch("accounts.request_json", return_value=quota()):
+            prepared = self.store.prepare_usage_reset(key)
+        with patch("accounts.request_json", side_effect=accounts.RemoteError(None)) as remote:
+            with self.assertRaisesRegex(RuntimeError, "unknown"):
+                self.store.confirm_usage_reset(key, prepared["confirmation_token"])
+            with self.assertRaises(RuntimeError):
+                self.store.prepare_usage_reset(key)
+            self.assertEqual(remote.call_count, 1)
+
     def test_import_switch_and_private_files_without_external_cli(self):
         keys = self.store.import_documents([auth(), auth("user-2")])
         self.assertFalse((self.home / "auth.json").exists())

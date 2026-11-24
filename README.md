@@ -402,3 +402,18 @@ Reference projects: [codex-auth](https://github.com/Loongphy/codex-auth) and
 not runtime dependencies. TailAdmin, Outfit, and the Lobe Icons Codex symbol retain
 their respective upstream notices. Product names and logos identify their
 respective owners.
+
+### Usage reset credits
+
+Native ChatGPT accounts with available reset credits have a **Reset usage** button
+in the Accounts page and Telegram overview. Both require a second confirmation
+before consuming a credit. The confirmation refreshes usage and warns when more
+than 10% of the weekly quota remains, when the weekly reset is less than 24 hours
+away, or when weekly information is unavailable. Confirmations expire after two
+minutes and cannot be reused. No credit is consumed by opening or cancelling the
+confirmation.
+
+A failed or unrecognized consume response leaves the operation blocked to prevent
+accidental duplicate consumption. Verify the outcome in ChatGPT before resolving
+the account's stored `reset_operation` state; restarting the service does not
+remove this protection. Successful resets refresh the saved usage automatically.
