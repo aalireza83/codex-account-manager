@@ -156,12 +156,13 @@ class TelegramBot:
             label = self.clean(item['label'], 60)
             ping = '/ping ' + item['id'] if item['kind'] == 'account' else None
             switch = ('/profile ' if item['kind'] == 'api' else '/switch ') + item['id']
-            rows.append([self.button(label, None, item, settings, page, chat_id),
-                         self.button('Ping' if ping else '—', ping, item, settings, page, chat_id),
+            reset = ('/reset-prepare ' + item['id'] if item['kind'] == 'account'
+                     and (self.number((item.get('usage') or {}).get('reset_credits')) or 0) > 0 else None)
+            rows.append([self.button(label, None, item, settings, page, chat_id)])
+            rows.append([self.button('Ping' if ping else '—', ping, item, settings, page, chat_id),
                          self.button('✓ Active' if item.get('active') else 'Switch',
-                                     None if item.get('active') else switch, item, settings, page, chat_id)])
-            if item['kind'] == 'account' and (self.number((item.get('usage') or {}).get('reset_credits')) or 0) > 0:
-                rows.append([self.button('Reset usage: ' + label, '/reset-prepare ' + item['id'], item, settings, page, chat_id)])
+                                     None if item.get('active') else switch, item, settings, page, chat_id),
+                         self.button('Reset usage' if reset else '—', reset, item, settings, page, chat_id)])
         while len(self.actions) > 2048:
             self.actions.pop(next(iter(self.actions)))
         navigation = []
@@ -177,7 +178,7 @@ class TelegramBot:
         if notice:
             text += '\n' + notice
         text += '\n\n' + ('\n\n'.join(section for _, section in pages[page]) or 'No accounts saved.')
-        text += '\n\nName / email | Ping | Switch'
+        text += '\n\nName / email, then Ping | Switch | Reset usage'
         await self.render(bot, chat_id, text, InlineKeyboardMarkup(inline_keyboard=rows), message_id)
 
     async def on_message(self, message, bot, settings, stop):

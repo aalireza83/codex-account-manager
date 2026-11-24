@@ -120,6 +120,8 @@ class AiogramTests(unittest.IsolatedAsyncioTestCase):
         self.command.side_effect = [json.dumps({'query':'stable-key','confirmation_token':'nonce',
             'message':'Consume one reset?', 'warnings':['Weekly quota has 60% remaining.', 'Weekly reset is within 24 hours.']}), 'Usage reset completed.']
         markup = await self.overview()
+        self.assertEqual([b.text for b in markup.inline_keyboard[0]], ['Work'])
+        self.assertEqual([b.text for b in markup.inline_keyboard[1]], ['Ping', 'Switch', 'Reset usage'])
         reset = next(b for row in markup.inline_keyboard for b in row if b.text.startswith('Reset usage'))
         await self.bot.on_callback(self.callback(reset.callback_data),self.client,self.settings,self.stop)
         self.command.assert_called_once_with('/reset-prepare stable-key')
@@ -134,7 +136,7 @@ class AiogramTests(unittest.IsolatedAsyncioTestCase):
         await self.bot.on_callback(self.callback(confirm.callback_data),self.client,self.settings,self.stop)
         self.assertEqual(self.command.call_count,2)
 
-    async def test_start_shows_limits_and_three_columns_without_an_extra_menu(self):
+    async def test_start_shows_account_name_then_three_actions(self):
         from aiogram.types import InlineKeyboardMarkup,ReplyKeyboardRemove
         self.client.send_message.return_value.message_id=99
         await self.bot.on_message(self.message,self.client,self.settings,self.stop)
@@ -146,9 +148,11 @@ class AiogramTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn('Active profile',text)
         markup=calls[-1].kwargs['reply_markup']
         self.assertIsInstance(markup,InlineKeyboardMarkup)
-        self.assertEqual([button.text for button in markup.inline_keyboard[0]],['Work','Ping','Switch'])
-        self.assertEqual([button.text for button in markup.inline_keyboard[1]],['API','—','Switch'])
-        self.assertEqual(len(markup.inline_keyboard),3)
+        self.assertEqual([button.text for button in markup.inline_keyboard[0]],['Work'])
+        self.assertEqual([button.text for button in markup.inline_keyboard[1]],['Ping','Switch','—'])
+        self.assertEqual([button.text for button in markup.inline_keyboard[2]],['API'])
+        self.assertEqual([button.text for button in markup.inline_keyboard[3]],['—','Switch','—'])
+        self.assertEqual(len(markup.inline_keyboard),5)
         self.client.edit_message_text.assert_not_called()
         self.client.delete_message.assert_awaited_once_with(42,99)
         self.command.assert_not_called()
@@ -166,7 +170,7 @@ class AiogramTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_ping_targets_stable_id_and_cannot_execute_twice(self):
         markup=await self.overview()
-        data=markup.inline_keyboard[0][1].callback_data
+        data=markup.inline_keyboard[1][0].callback_data
         self.choices.reverse()
         await self.bot.on_callback(self.callback(data),self.client,self.settings,self.stop)
         self.command.assert_called_once_with('/ping stable-key')
@@ -176,21 +180,21 @@ class AiogramTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_native_and_api_switch_buttons_share_the_overview(self):
         markup=await self.overview()
-        await self.bot.on_callback(self.callback(markup.inline_keyboard[0][2].callback_data),self.client,self.settings,self.stop)
+        await self.bot.on_callback(self.callback(markup.inline_keyboard[1][1].callback_data),self.client,self.settings,self.stop)
         self.command.assert_called_with('/switch stable-key')
         markup=self.client.edit_message_text.call_args.kwargs['reply_markup']
-        await self.bot.on_callback(self.callback(markup.inline_keyboard[1][2].callback_data),self.client,self.settings,self.stop)
+        await self.bot.on_callback(self.callback(markup.inline_keyboard[3][1].callback_data),self.client,self.settings,self.stop)
         self.command.assert_called_with('/profile api-test')
         self.assertIn('Account selected: API',self.client.edit_message_text.call_args.args[0])
 
     async def test_active_state_updates_after_switch_and_api_ping_is_unavailable(self):
         self.command.side_effect=lambda command:self.choices[1].update(active=True)
         markup=await self.overview()
-        await self.bot.on_callback(self.callback(markup.inline_keyboard[1][2].callback_data),self.client,self.settings,self.stop)
+        await self.bot.on_callback(self.callback(markup.inline_keyboard[3][1].callback_data),self.client,self.settings,self.stop)
         markup=self.client.edit_message_text.call_args.kwargs['reply_markup']
-        self.assertEqual(markup.inline_keyboard[1][2].text,'✓ Active')
+        self.assertEqual(markup.inline_keyboard[3][1].text,'✓ Active')
         self.command.reset_mock()
-        for button in markup.inline_keyboard[1]:
+        for button in markup.inline_keyboard[3]:
             await self.bot.on_callback(self.callback(button.callback_data),self.client,self.settings,self.stop)
         self.command.assert_not_called()
 
@@ -201,7 +205,7 @@ class AiogramTests(unittest.IsolatedAsyncioTestCase):
             await self.bot.on_message(Message.model_validate({**self.message_data,**change}),self.client,self.settings,self.stop)
         self.client.send_message.assert_not_called()
         markup=await self.overview()
-        data=markup.inline_keyboard[0][2].callback_data
+        data=markup.inline_keyboard[1][1].callback_data
         await self.bot.on_callback(self.callback(data,user_id=7),self.client,self.settings,self.stop)
         await self.bot.on_callback(self.callback(data),self.client,{**self.settings,'token':'changed'},self.stop)
         key=data[3:]
@@ -217,7 +221,7 @@ class AiogramTests(unittest.IsolatedAsyncioTestCase):
         from aiogram.types import CallbackQuery,Message
         self.settings['allowed_user_id']='42, 7'
         markup=await self.overview()
-        owner_button=markup.inline_keyboard[0][2].callback_data
+        owner_button=markup.inline_keyboard[1][1].callback_data
         data={**self.message_data,'from':{'id':7,'is_bot':False,'first_name':'Other admin'},
               'chat':{'id':7,'type':'private'}}
         await self.bot.on_message(Message.model_validate(data),self.client,self.settings,self.stop)
@@ -227,11 +231,11 @@ class AiogramTests(unittest.IsolatedAsyncioTestCase):
                        'from':data['from'],'data':button}).as_(self.client)
         await self.bot.on_callback(callback(owner_button),self.client,self.settings,self.stop)
         self.command.assert_not_called()
-        await self.bot.on_callback(callback(admin_markup.inline_keyboard[0][2].callback_data),self.client,self.settings,self.stop)
+        await self.bot.on_callback(callback(admin_markup.inline_keyboard[1][1].callback_data),self.client,self.settings,self.stop)
         self.command.assert_called_once_with('/switch stable-key')
         self.command.reset_mock()
         self.settings['allowed_user_id']='42'
-        await self.bot.on_callback(callback(admin_markup.inline_keyboard[0][1].callback_data),self.client,self.settings,self.stop)
+        await self.bot.on_callback(callback(admin_markup.inline_keyboard[1][0].callback_data),self.client,self.settings,self.stop)
         self.command.assert_not_called()
 
     async def test_refresh_button_fetches_usage_without_any_command(self):
@@ -284,7 +288,7 @@ class AiogramTests(unittest.IsolatedAsyncioTestCase):
     async def test_operation_errors_do_not_disclose_credentials(self):
         markup=await self.overview()
         self.command.side_effect=RuntimeError('secret-output '+TOKEN)
-        await self.bot.on_callback(self.callback(markup.inline_keyboard[0][1].callback_data),self.client,self.settings,self.stop)
+        await self.bot.on_callback(self.callback(markup.inline_keyboard[1][0].callback_data),self.client,self.settings,self.stop)
         text=self.client.edit_message_text.call_args.args[0]
         self.assertIn('Operation failed',text)
         self.assertNotIn('secret-output',text)
@@ -303,7 +307,7 @@ class AiogramTests(unittest.IsolatedAsyncioTestCase):
             if calls==2:return [Update.model_validate({'update_id':2,'message':self.message_data})]
             if calls==3:
                 markup=self.client.send_message.call_args.kwargs['reply_markup']
-                return [Update(update_id=3,callback_query=self.callback(markup.inline_keyboard[0][2].callback_data))]
+                return [Update(update_id=3,callback_query=self.callback(markup.inline_keyboard[1][1].callback_data))]
             self.stop.set();return []
         self.client.get_updates.side_effect=get_updates
         with patch('aiogram.Bot',return_value=self.client):await self.bot.session(self.settings,self.stop)
